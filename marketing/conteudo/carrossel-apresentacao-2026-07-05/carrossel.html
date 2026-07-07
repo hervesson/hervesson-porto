@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Carrossel — Antes de falar de TI, eu construí ela</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --dark:#1E1F24;
+    --cream:#FAFAF7;
+    --accent:#0090FF;
+    --off-white:#FAFAF7;
+    --muted-dark: rgba(255,255,255,0.6);
+    --muted-light: rgba(30,31,36,0.55);
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{font-family:'Plus Jakarta Sans', sans-serif;}
+  .slide{
+    width:1080px;
+    height:1350px;
+    position:relative;
+    overflow:hidden;
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    padding:90px 80px;
+  }
+  .bg-dark{background:var(--dark); color:var(--off-white);}
+  .bg-cream{background:var(--cream); color:var(--dark);}
+  .bg-accent{background:var(--accent); color:var(--off-white);}
+
+  .brand-row{
+    position:absolute;
+    top:60px; left:80px; right:80px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+  }
+  .brand-row img{height:40px; width:auto;}
+  .brand-left{
+    display:flex; align-items:center; gap:16px;
+  }
+  .brand-left .handle-top{
+    font-size:24px; font-weight:600;
+  }
+  .counter{
+    font-size:15px; font-weight:600; letter-spacing:0.18em;
+  }
+  .counter.on-dark, .counter.on-accent{color:var(--muted-dark);}
+  .counter.on-cream{color:var(--muted-light);}
+
+  .eyebrow{
+    font-size:15px; font-weight:800; text-transform:uppercase;
+    letter-spacing:0.28em; color:var(--accent); margin-bottom:28px;
+  }
+  .bg-accent .eyebrow{color:var(--dark);}
+
+  .regua{
+    width:70px; height:4px; background:var(--accent);
+    margin:26px 0 30px 0; border-radius:2px;
+  }
+  .bg-accent .regua{background:var(--dark);}
+
+  h1.title{
+    font-size:92px; font-weight:800; line-height:1.0; letter-spacing:-0.04em;
+    max-width:880px;
+  }
+  .bg-accent h1.title{color:var(--dark);}
+  h2.title{
+    font-size:62px; font-weight:800; line-height:1.08; letter-spacing:-0.035em;
+    max-width:880px; margin-bottom:36px;
+  }
+  p.body{
+    font-size:32px; font-weight:500; line-height:1.5; max-width:820px;
+  }
+  .bg-cream p.body{color:#444;}
+
+  .handle{
+    font-size:17px; font-weight:600; margin-top:50px;
+  }
+
+  .cta-headline{
+    font-size:72px; font-weight:800; line-height:1.05; letter-spacing:-0.035em;
+    max-width:820px; margin-bottom:20px;
+  }
+  .cta-sub{
+    font-size:28px; font-weight:500; opacity:0.9; margin-bottom:60px;
+  }
+</style>
+</head>
+<body>
+
+<!-- SLIDE 1 — CAPA (destaque) -->
+<div class="slide bg-accent">
+  <div class="brand-row">
+    <div class="brand-left">
+      <img src="../../../identidade/logo-dark.png" alt="logo">
+      <span class="handle-top">@hervessongporto</span>
+    </div>
+  </div>
+  <div class="eyebrow">QUEM SOU EU</div>
+  <h1 class="title">Antes de<br>falar de TI,<br>eu construí ela</h1>
+</div>
+
+<!-- SLIDE 2 — TEXTO (escuro) -->
+<div class="slide bg-dark">
+  <div class="brand-row">
+    <div class="brand-left">
+      <img src="../../../identidade/logo-dark.png" alt="logo">
+      <span class="handle-top">@hervessongporto</span>
+    </div>
+    <span class="counter on-dark">02 / 06</span>
+  </div>
+  <div class="eyebrow">DE ONDE EU VIM</div>
+  <h2 class="title">Comecei escrevendo código</h2>
+  <p class="body">Comecei como desenvolvedor front-end: React, React Native, Next.js. Nos últimos anos, construí apps de ponta a ponta (API, pagamento, push notification, deploy nas lojas) pra startups brasileiras e uma empresa internacional.</p>
+</div>
+
+<!-- SLIDE 3 — TEXTO (claro) -->
+<div class="slide bg-cream">
+  <div class="brand-row">
+    <div class="brand-left">
+      <img src="../../../identidade/logo-light.png" alt="logo">
+      <span class="handle-top">@hervessongporto</span>
+    </div>
+    <span class="counter on-cream">03 / 06</span>
+  </div>
+  <div class="eyebrow">O QUE EU APRENDI</div>
+  <h2 class="title">Onde as empresas travam</h2>
+  <p class="body">Trabalhar direto no código me ensinou onde a maioria das empresas trava. Não é falta de ferramenta. É falta de alguém pensando em estrutura antes do problema aparecer.</p>
+</div>
+
+<!-- SLIDE 4 — TEXTO (escuro) -->
+<div class="slide bg-dark">
+  <div class="brand-row">
+    <div class="brand-left">
+      <img src="../../../identidade/logo-dark.png" alt="logo">
+      <span class="handle-top">@hervessongporto</span>
+    </div>
+    <span class="counter on-dark">04 / 06</span>
+  </div>
+  <div class="eyebrow">FORMAÇÃO</div>
+  <h2 class="title">Análise e Desenvolvimento de Sistemas</h2>
+  <p class="body">Sou graduando em Análise e Desenvolvimento de Sistemas, com foco em planejamento, arquitetura e desenvolvimento de projetos.</p>
+</div>
+
+<!-- SLIDE 5 — TEXTO (claro) -->
+<div class="slide bg-cream">
+  <div class="brand-row">
+    <div class="brand-left">
+      <img src="../../../identidade/logo-light.png" alt="logo">
+      <span class="handle-top">@hervessongporto</span>
+    </div>
+    <span class="counter on-cream">05 / 06</span>
+  </div>
+  <div class="eyebrow">O QUE EU FAÇO HOJE</div>
+  <h2 class="title">TI e IA aplicada à estratégia</h2>
+  <p class="body">Hoje aplico tudo isso de um jeito diferente: TI e IA aplicada à estratégia de negócios, pra empresários que tocam o negócio sem estrutura de TI.</p>
+</div>
+
+<!-- SLIDE 6 — CTA FINAL (destaque) -->
+<div class="slide bg-accent" style="align-items:center; text-align:center;">
+  <div class="brand-row">
+    <div class="brand-left">
+      <img src="../../../identidade/logo-dark.png" alt="logo">
+      <span class="handle-top">@hervessongporto</span>
+    </div>
+    <span class="counter on-accent">06 / 06</span>
+  </div>
+  <img src="../../../identidade/logo-dark.png" alt="logo" style="height:90px; margin-bottom:50px;">
+  <div class="cta-headline">Se identificou?</div>
+  <div class="cta-sub">Vamos conversar.</div>
+</div>
+
+</body>
+</html>
