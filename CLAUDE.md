@@ -173,6 +173,7 @@ isso internamente. IA usada de forma prática pra growth, não como hype.
 - Site do negócio em `site/` (Next.js 16 + Tailwind v4; `npm run dev` dentro de `site/`). Contatos/WhatsApp centralizados em `site/lib/site.ts`
 - Blog do site: posts em `site/content/blog/<slug>.md` (frontmatter `draft: true/false` — é o que o `/aprovar-post` flipa); imagens dos carrosséis em `site/public/img/posts/<slug>/slide-*.png`
 - `SITE_URL` no `.env` da raiz: preencher depois do deploy na Vercel (pendente)
+- Logos de empresas atendidas: soltar PNG/SVG em `site/public/img/clientes/` — a seção marquee da Home lê a pasta sozinha (vazia = seção oculta)
 - Outras regras que aparecerem com o uso
 
 ## Ferramentas conectadas
