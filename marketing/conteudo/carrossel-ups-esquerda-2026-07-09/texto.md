@@ -16,7 +16,7 @@ Tema: Curiosidade do mundo dos negócios + TI aplicada com IA — caso UPS/ORION
 
 ## Blog
 
-Versão completa em `site/content/blog/por-que-a-ups-proibe-virar-a-esquerda.md` (draft — revisar e flipar `draft: false` antes de publicar). Depois do deploy, atualizar a legenda com o link real: `<SITE_URL>/blog/por-que-a-ups-proibe-virar-a-esquerda/`.
+Publicado: https://www.trinctecnologies.com.br/blog/por-que-a-ups-proibe-virar-a-esquerda
 
 ## Fonte da curiosidade
 
