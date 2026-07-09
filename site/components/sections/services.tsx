@@ -1,13 +1,31 @@
+import type { ComponentType, ReactNode } from "react"
 import {
   Bot,
   Megaphone,
   PenSquare,
   Database,
   Workflow,
-  Check,
 } from "lucide-react"
+import { ChatDemo } from "@/components/ui/chat-demo"
+import {
+  AdsDemo,
+  InstaDemo,
+  CrmDemo,
+  ProcessDemo,
+} from "@/components/ui/service-demos"
+import { site } from "@/lib/site"
 
-const services = [
+interface Service {
+  number: string
+  icon: ComponentType<{ className?: string }>
+  name: string
+  title: string
+  description: string
+  features: string[]
+  visual?: ReactNode
+}
+
+const services: Service[] = [
   {
     number: "01",
     icon: Bot,
@@ -20,6 +38,7 @@ const services = [
       "Lead chega até você já qualificado",
       "IA onde reduz perda de venda, não onde está na moda",
     ],
+    visual: <ChatDemo />,
   },
   {
     number: "02",
@@ -33,6 +52,7 @@ const services = [
       "Foco em custo de aquisição e retorno, não em curtida",
       "Relatório claro do que entrou e do que rendeu, mês a mês",
     ],
+    visual: <AdsDemo />,
   },
   {
     number: "03",
@@ -46,6 +66,7 @@ const services = [
       "Calendário de conteúdo que não depende da inspiração do dia",
       "Autoridade que sustenta o investimento em tráfego",
     ],
+    visual: <InstaDemo />,
   },
   {
     number: "04",
@@ -59,6 +80,7 @@ const services = [
       "Feito pro seu processo, não um SaaS genérico que não encaixa",
       "O sistema é seu, sem mensalidade de ferramenta que não usa",
     ],
+    visual: <CrmDemo />,
   },
   {
     number: "05",
@@ -72,13 +94,28 @@ const services = [
       "Automação no que hoje é manual e trava sua equipe",
       "Estrutura que aparece no lucro, não só no papel",
     ],
+    visual: <ProcessDemo />,
   },
 ]
 
+function VisualPlaceholder({ service }: { service: Service }) {
+  return (
+    <div className="relative mx-auto flex aspect-[4/3] w-full max-w-md items-center justify-center overflow-hidden rounded-3xl border border-white/10 bg-white/[0.03]">
+      <span className="absolute -right-6 -bottom-10 text-[180px] font-extrabold leading-none text-brand/10">
+        {service.number}
+      </span>
+      <service.icon className="h-16 w-16 text-brand/40" />
+    </div>
+  )
+}
+
 export function Services() {
   return (
-    <section id="solucoes" className="max-w-7xl mx-auto px-4 md:px-8 py-20 scroll-mt-16">
-      <div className="max-w-3xl mx-auto text-center space-y-4 mb-14">
+    <section
+      id="solucoes"
+      className="max-w-7xl mx-auto px-4 md:px-8 py-20 scroll-mt-16"
+    >
+      <div className="max-w-3xl mx-auto text-center space-y-4 mb-20">
         <h2 className="text-3xl md:text-4xl font-semibold tracking-tight">
           Soluções que funcionam <span className="text-brand">juntas</span>
         </h2>
@@ -88,34 +125,44 @@ export function Services() {
           cada peça reforça a outra.
         </p>
       </div>
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {services.map((service) => (
+
+      <div className="space-y-24">
+        {services.map((service, index) => (
           <div
             key={service.number}
-            className="rounded-2xl border border-black/5 dark:border-white/10 bg-white dark:bg-white/[0.03] p-7 flex flex-col gap-4 hover:border-brand/40 transition-colors"
+            className="grid items-center gap-12 lg:grid-cols-2 lg:gap-20"
           >
-            <div className="flex items-center justify-between">
-              <span className="inline-flex items-center justify-center w-11 h-11 rounded-xl bg-brand/10 text-brand">
-                <service.icon className="w-5 h-5" />
-              </span>
-              <span className="text-sm font-medium text-gray-400 dark:text-gray-500">
-                {service.number} · {service.name}
-              </span>
+            <div className={index % 2 === 1 ? "lg:order-2" : undefined}>
+              {service.visual ?? <VisualPlaceholder service={service} />}
             </div>
-            <h3 className="text-lg font-semibold leading-snug">
-              {service.title}
-            </h3>
-            <p className="text-sm text-gray-600 dark:text-gray-300">
-              {service.description}
-            </p>
-            <ul className="mt-auto space-y-2 text-sm text-gray-600 dark:text-gray-300">
-              {service.features.map((feature) => (
-                <li key={feature} className="flex gap-2">
-                  <Check className="w-4 h-4 mt-0.5 shrink-0 text-brand" />
-                  {feature}
-                </li>
-              ))}
-            </ul>
+            <div className={index % 2 === 1 ? "lg:order-1" : undefined}>
+              <p className="text-sm font-bold uppercase tracking-[0.2em] text-brand">
+                <span className="mr-2 text-gray-500">{service.number}</span>
+                {service.name}
+              </p>
+              <h3 className="mt-4 text-2xl font-semibold leading-snug tracking-tight md:text-3xl">
+                {service.title}
+              </h3>
+              <p className="mt-4 text-gray-600 dark:text-gray-300">
+                {service.description}
+              </p>
+              <ul className="mt-8 space-y-3 border-t border-black/5 pt-8 text-sm text-gray-600 dark:border-white/10 dark:text-gray-200">
+                {service.features.map((feature) => (
+                  <li key={feature} className="flex items-start gap-3">
+                    <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-brand" />
+                    {feature}
+                  </li>
+                ))}
+              </ul>
+              <a
+                href={site.whatsappUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-9 inline-flex items-center rounded-full border border-brand/50 px-7 py-3 text-sm font-medium text-brand transition-colors hover:bg-brand hover:text-white"
+              >
+                Descobrir se é pra mim
+              </a>
+            </div>
           </div>
         ))}
       </div>
