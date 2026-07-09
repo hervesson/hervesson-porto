@@ -40,6 +40,7 @@ Geométrico e direto — ícone hexagonal com setas, sem floreios. Combina com o
 
 ## Elementos-chave
 
+- **Capa de carrossel: sem contador de páginas** (o "01/07" só aparece do slide 2 em diante) — definido em 2026-07-07
 - Bordas: cantos arredondados (consistente com "Angular Rounded")
 - Border-radius dos cards: não informado
 - Botões: não informado

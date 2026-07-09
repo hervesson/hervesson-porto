@@ -1,10 +1,10 @@
-Sua empresa trava e você acha que é falta de gente, de dinheiro ou de tempo?
+Quantas decisões importantes você tomou esse mês no "acho que"?
 
-Na maioria das vezes o problema é outro: não existe estrutura de TI por trás das decisões. Dado espalhado, processo que só uma pessoa sabe fazer, ferramenta que não conversa com ferramenta nenhuma — e o caos só cresce junto com o negócio.
+Na maioria das empresas o problema não é falta de gente, dinheiro ou tempo: é não ter estrutura de TI por trás das decisões. Dado espalhado, processo que só uma pessoa sabe fazer, ferramenta que não conversa com ferramenta nenhuma — e o caos só cresce junto com o negócio.
 
-Arrasta pro lado e confere os sinais de que sua empresa tá rodando no improviso.
+Arrasta pro lado e confere os 4 sinais de que sua empresa tá rodando no improviso.
 
-Aplico TI com IA em negócios que precisam de estrutura e não têm um TI forte como background. Não é sobre virar empresa de tecnologia — é sobre ter alguém pensando nisso antes do problema aparecer.
+Aplico TI e IA em negócios que precisam de estrutura e não têm tecnologia como background. Não é sobre virar empresa de tecnologia — é sobre ter alguém pensando nisso antes do problema aparecer.
 
 Chama no direct ou no link da bio.
 

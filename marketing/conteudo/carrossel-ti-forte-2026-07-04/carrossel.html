@@ -37,6 +37,7 @@
     display:flex;
     justify-content:space-between;
     align-items:center;
+    z-index:2;
   }
   .brand-row img{height:40px; width:auto;}
   .brand-left{
@@ -53,7 +54,7 @@
 
   .eyebrow{
     font-size:15px; font-weight:800; text-transform:uppercase;
-    letter-spacing:0.28em; color:var(--accent); margin-bottom:28px;
+    letter-spacing:0.28em; color:var(--accent); margin-bottom:30px;
   }
   .bg-accent .eyebrow{color:var(--dark);}
 
@@ -68,39 +69,80 @@
     max-width:880px;
   }
   h2.title{
-    font-size:66px; font-weight:800; line-height:1.05; letter-spacing:-0.035em;
-    max-width:880px; margin-bottom:36px;
+    font-size:64px; font-weight:800; line-height:1.05; letter-spacing:-0.035em;
+    max-width:880px; margin-bottom:32px;
   }
   p.body{
-    font-size:32px; font-weight:500; line-height:1.5; max-width:820px;
+    font-size:32px; font-weight:500; line-height:1.5; max-width:800px;
+    position:relative; z-index:1;
   }
   .bg-cream p.body{color:#444;}
 
-  .handle{
-    font-size:17px; font-weight:600; margin-top:50px;
+  /* NÚMERO — numeral sólido acima do título */
+  .numero-solido{
+    font-size:230px; font-weight:800; color:var(--accent);
+    line-height:0.9; margin-bottom:24px;
   }
 
-  .numero-gigante{
-    font-size:280px; font-weight:800; color:var(--accent);
-    line-height:1; margin-bottom:10px;
+  /* NÚMERO — numeral gigante em marca d'água à direita */
+  .numero-marca{
+    position:absolute;
+    font-size:760px; font-weight:800; line-height:1;
+    right:-40px; top:50%; transform:translateY(-50%);
+    z-index:0; pointer-events:none;
   }
-  .bg-accent .numero-gigante{color:var(--dark);}
+  .bg-cream .numero-marca{color:rgba(0,144,255,0.10);}
+  .bg-accent .numero-marca{color:rgba(30,31,36,0.12);}
+
+  .content{position:relative; z-index:1;}
+
+  /* Dica de arrastar (capa) */
+  .swipe-hint{
+    position:absolute; bottom:70px; left:80px;
+    font-size:20px; font-weight:600; letter-spacing:0.06em;
+    color:var(--muted-dark);
+  }
+
+  /* Rodapé fino dos slides internos escuros */
+  .footer-line{
+    position:absolute; bottom:70px; left:80px; right:80px;
+    border-top:1px solid rgba(255,255,255,0.12);
+    padding-top:22px;
+    font-size:16px; font-weight:600; letter-spacing:0.14em;
+    text-transform:uppercase;
+  }
+  .footer-line.on-dark{color:var(--muted-dark);}
+  .footer-line.on-cream{border-top-color:rgba(30,31,36,0.14); color:var(--muted-light);}
+  .footer-line.on-accent{border-top-color:rgba(255,255,255,0.25); color:rgba(255,255,255,0.75);}
 
   .quote-mark{
-    font-size:220px; font-weight:800; color:var(--accent);
-    opacity:0.18; position:absolute; top:120px; left:70px; line-height:1;
+    font-size:340px; font-weight:800; color:var(--accent);
+    opacity:0.16; position:absolute; top:100px; left:60px; line-height:1;
+    z-index:0;
   }
   .quote-text{
-    font-size:58px; font-weight:800; line-height:1.15; letter-spacing:-0.03em;
+    font-size:56px; font-weight:800; line-height:1.18; letter-spacing:-0.03em;
     max-width:860px; position:relative; z-index:1;
+  }
+  .quote-attr{
+    font-size:24px; font-weight:600; color:var(--muted-dark);
+    margin-top:44px; position:relative; z-index:1;
   }
 
   .cta-headline{
-    font-size:72px; font-weight:800; line-height:1.05; letter-spacing:-0.035em;
-    max-width:820px; margin-bottom:20px;
+    font-size:64px; font-weight:800; line-height:1.08; letter-spacing:-0.035em;
+    max-width:880px; margin-bottom:46px;
   }
-  .cta-sub{
-    font-size:28px; font-weight:500; opacity:0.9; margin-bottom:60px;
+  .cta-btn{
+    display:inline-block;
+    background:var(--dark); color:var(--off-white);
+    font-size:27px; font-weight:700;
+    padding:28px 68px; border-radius:999px;
+    letter-spacing:0.01em;
+  }
+  .cta-handle{
+    font-size:24px; font-weight:600; margin-top:40px;
+    color:rgba(255,255,255,0.85);
   }
 </style>
 </head>
@@ -114,11 +156,14 @@
       <span class="handle-top">@hervessongporto</span>
     </div>
   </div>
-  <div class="eyebrow">TI &amp; ESTRATÉGIA</div>
-  <h1 class="title">Sem TI forte,<br>sua empresa<br>trava sozinha</h1>
+  <div class="content">
+    <div class="eyebrow">TI APLICADA A NEGÓCIOS</div>
+    <h1 class="title">Decidir no feeling<br>tá custando caro<br>pra sua empresa</h1>
+  </div>
+  <div class="swipe-hint">arrasta pro lado &rarr;</div>
 </div>
 
-<!-- SLIDE 2 — TEXTO (claro) -->
+<!-- SLIDE 2 — NÚMERO sólido (claro) -->
 <div class="slide bg-cream">
   <div class="brand-row">
     <div class="brand-left">
@@ -127,12 +172,15 @@
     </div>
     <span class="counter on-cream">02 / 07</span>
   </div>
-  <div class="eyebrow">O PRIMEIRO SINAL</div>
-  <h2 class="title">Decisão no feeling</h2>
-  <p class="body">Toda decisão importante você toma no feeling, porque o dado que deveria te ajudar tá espalhado em três planilhas diferentes, ou não existe.</p>
+  <div class="content">
+    <div class="numero-solido">1</div>
+    <h2 class="title">Decisão no feeling</h2>
+    <p class="body">Toda decisão importante você toma no feeling, porque o dado que deveria te ajudar tá espalhado em três planilhas diferentes, ou não existe.</p>
+  </div>
+  <div class="footer-line on-cream">Sinal 01 de 04</div>
 </div>
 
-<!-- SLIDE 3 — NÚMERO (destaque) -->
+<!-- SLIDE 3 — NÚMERO marca d'água (destaque) -->
 <div class="slide bg-accent">
   <div class="brand-row">
     <div class="brand-left">
@@ -141,12 +189,16 @@
     </div>
     <span class="counter on-accent">03 / 07</span>
   </div>
-  <div class="numero-gigante">1</div>
-  <h2 class="title">pessoa sabe fazer certo</h2>
-  <p class="body">Tem processo que só funciona porque uma pessoa específica sabe fazer do jeito certo. No dia que ela falta, a empresa para.</p>
+  <div class="numero-marca">2</div>
+  <div class="content">
+    <div class="eyebrow">Sinal 02</div>
+    <h2 class="title">Só uma pessoa sabe fazer certo</h2>
+    <p class="body" style="margin-top:36px; color:rgba(255,255,255,0.92);">Tem processo que só funciona porque uma pessoa específica sabe fazer do jeito certo. No dia que ela falta, a empresa para.</p>
+  </div>
+  <div class="footer-line on-accent">Sinal 02 de 04</div>
 </div>
 
-<!-- SLIDE 4 — TEXTO (escuro) -->
+<!-- SLIDE 4 — NÚMERO sólido (escuro) -->
 <div class="slide bg-dark">
   <div class="brand-row">
     <div class="brand-left">
@@ -155,12 +207,15 @@
     </div>
     <span class="counter on-dark">04 / 07</span>
   </div>
-  <div class="eyebrow">FERRAMENTA NÃO É SISTEMA</div>
-  <h2 class="title">Nada conversa com nada</h2>
-  <p class="body">Planilha aqui, WhatsApp ali, sistema que não conversa com nada. Cada ferramenta nova vira mais um lugar pra procurar informação, não menos.</p>
+  <div class="content">
+    <div class="numero-solido">3</div>
+    <h2 class="title">Nada conversa com nada</h2>
+    <p class="body">Planilha aqui, WhatsApp ali, sistema que não conversa com nada. Cada ferramenta nova vira mais um lugar pra procurar informação, não menos.</p>
+  </div>
+  <div class="footer-line on-dark">Sinal 03 de 04</div>
 </div>
 
-<!-- SLIDE 5 — TEXTO (claro) -->
+<!-- SLIDE 5 — NÚMERO marca d'água (claro) -->
 <div class="slide bg-cream">
   <div class="brand-row">
     <div class="brand-left">
@@ -169,9 +224,13 @@
     </div>
     <span class="counter on-cream">05 / 07</span>
   </div>
-  <div class="eyebrow">O ERRO MAIS COMUM</div>
-  <h2 class="title">Crescer multiplica o caos</h2>
-  <p class="body">Crescer sem estrutura de TI não resolve o caos, multiplica ele. Mais cliente, mais gente, mais processo manual quebrando ao mesmo tempo.</p>
+  <div class="numero-marca">4</div>
+  <div class="content">
+    <div class="eyebrow">Sinal 04</div>
+    <h2 class="title">Crescer multiplica o caos</h2>
+    <p class="body" style="margin-top:36px;">Crescer sem estrutura de TI não resolve o caos, multiplica ele. Mais cliente, mais gente, mais processo manual quebrando ao mesmo tempo.</p>
+  </div>
+  <div class="footer-line on-cream">Sinal 04 de 04</div>
 </div>
 
 <!-- SLIDE 6 — CITAÇÃO (escuro) -->
@@ -184,7 +243,10 @@
     <span class="counter on-dark">06 / 07</span>
   </div>
   <div class="quote-mark">&ldquo;</div>
-  <p class="quote-text">Você não precisa virar uma empresa de tecnologia. Precisa de alguém pensando em TI do jeito que pensa em estratégia, antes do problema aparecer, não depois.</p>
+  <div class="content">
+    <p class="quote-text">Você não precisa virar uma empresa de tecnologia. Precisa de alguém pensando em TI do jeito que pensa em estratégia.</p>
+    <div class="quote-attr">— Hervesson Porto</div>
+  </div>
 </div>
 
 <!-- SLIDE 7 — CTA FINAL (destaque) -->
@@ -197,8 +259,9 @@
     <span class="counter on-accent">07 / 07</span>
   </div>
   <img src="../../../identidade/logo-dark.png" alt="logo" style="height:90px; margin-bottom:50px;">
-  <div class="cta-headline">Bora tirar sua<br>empresa do improviso?</div>
-  <div class="cta-sub">Fala comigo</div>
+  <div class="cta-headline">Vamos fazer a tecnologia<br>trabalhar pra sua empresa?</div>
+  <div><span class="cta-btn">Fala comigo</span></div>
+  <div class="cta-handle">@hervessongporto</div>
 </div>
 
 </body>

@@ -4,10 +4,11 @@ const path = require('path');
 (async () => {
   const browser = await chromium.launch();
   const page = await browser.newPage({ viewport: { width: 1080, height: 1350 } });
-  await page.route(/fonts\.(googleapis|gstatic)\.com/, route => route.abort());
   const htmlPath = path.join(__dirname, 'carrossel.html');
-  await page.goto('file://' + htmlPath, { waitUntil: 'domcontentloaded', timeout: 10000 }).catch(() => {});
-  await page.waitForTimeout(500);
+  await page.goto('file://' + htmlPath, { waitUntil: 'networkidle', timeout: 30000 });
+  // garante que as web fonts terminaram de carregar antes do screenshot
+  await page.evaluate(() => document.fonts.ready);
+  await page.waitForTimeout(300);
 
   const slides = await page.$$('.slide');
   for (let i = 0; i < slides.length; i++) {
