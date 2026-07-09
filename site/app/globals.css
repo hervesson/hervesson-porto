@@ -1,8 +1,13 @@
 @import "tailwindcss";
 
+/* Site sempre no modo escuro: o variant dark: passa a depender da classe
+   .dark no <html> (fixa no layout), não da preferência do sistema. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
-  --background: #ffffff;
-  --foreground: #1e1f24;
+  --background: #0b0c0e;
+  --foreground: #ededed;
+  color-scheme: dark;
 }
 
 @theme inline {
@@ -11,22 +16,41 @@
   --color-brand: #0090ff;
   --font-sans: var(--font-jakarta);
 
-  --animate-grid: grid 15s linear infinite;
+  --animate-marquee: marquee 35s linear infinite;
+  --animate-pop: pop 0.35s ease-out both;
+  --animate-typing: typing 1.1s ease-in-out infinite;
 
-  @keyframes grid {
+  @keyframes marquee {
     0% {
-      transform: translateY(-50%);
+      transform: translateX(0);
     }
     100% {
-      transform: translateY(0);
+      transform: translateX(-50%);
     }
   }
-}
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0b0c0e;
-    --foreground: #ededed;
+  @keyframes pop {
+    0% {
+      opacity: 0;
+      transform: translateY(10px) scale(0.97);
+    }
+    100% {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  @keyframes typing {
+    0%,
+    60%,
+    100% {
+      transform: none;
+      opacity: 0.4;
+    }
+    30% {
+      transform: translateY(-3px);
+      opacity: 1;
+    }
   }
 }
 
