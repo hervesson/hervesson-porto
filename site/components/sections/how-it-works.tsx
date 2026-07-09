@@ -28,8 +28,8 @@ export function HowItWorks() {
             Como funciona
           </h2>
           <p className="text-gray-600 dark:text-gray-300">
-            Um processo direto, pensado pra quem quer sair do improviso sem
-            virar refém de agência.
+            Um processo direto, pensado pra quem quer estrutura sem virar
+            refém de agência.
           </p>
         </div>
         <div className="grid gap-6 md:grid-cols-3">

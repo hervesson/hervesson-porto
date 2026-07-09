@@ -8,7 +8,7 @@ export function ContactCta() {
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_50%_80%_at_50%_-20%,rgba(0,144,255,0.35),transparent)]" />
         <div className="relative space-y-5 max-w-2xl mx-auto">
           <h2 className="text-3xl md:text-4xl font-semibold tracking-tight">
-            Bora tirar sua empresa do improviso?
+            Vamos fazer a tecnologia trabalhar pra sua empresa?
           </h2>
           <p className="text-gray-300">
             Me chama no WhatsApp e a gente começa pelo diagnóstico gratuito.
