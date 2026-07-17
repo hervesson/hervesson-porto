@@ -169,11 +169,13 @@ isso internamente. IA usada de forma prática pra growth, não como hype.
 ## Regras do sistema
 
 - Conteúdo novo salvar em `marketing/conteudo/<tipo>-<tema>-<data>/`
+- Reels/vídeos pro Instagram: projeto Remotion em `reels/` (Node + TypeScript; `npm run studio` pra preview, `npm run render` pra gerar o MP4). Conteúdo dos serviços em `reels/src/data/services.ts` — espelha `site/components/sections/services.tsx`. Ver skill `/reel`. TypeScript fixo em v5.x nesse projeto (v7 quebra o bundler do Remotion)
 - Foco é a imagem pessoal (Hervesson Porto), não uma marca empresarial
 - Site do negócio em `site/` (Next.js 16 + Tailwind v4; `npm run dev` dentro de `site/`). Contatos/WhatsApp centralizados em `site/lib/site.ts`
 - Blog do site: posts em `site/content/blog/<slug>.md` (frontmatter `draft: true/false` — é o que o `/aprovar-post` flipa); imagens dos carrosséis em `site/public/img/posts/<slug>/slide-*.png`
 - Site no ar: https://www.trinctecnologies.com.br/ (deploy Vercel, domínio próprio). `SITE_URL` configurado em `.env` na raiz (não versionado)
 - Logos de empresas atendidas: soltar PNG/SVG em `site/public/img/clientes/` — a seção marquee da Home lê a pasta sozinha (vazia = seção oculta)
+- **CRM + atendimento WhatsApp com IA** em `crm/` — stack self-hosted: Postgres + Redis + Evolution API (WhatsApp via QR no número de `site/lib/site.ts`) + `crm-web` (Next.js: painel Kanban de leads + login + API + webhook + agente Claude). **Produção: deploy no Easypanel** (serviços nativos + domínio/SSL automático via Traefik) — guia em `crm/EASYPANEL.md`; o `docker-compose.yml` é só teste local. Fluxo: lead manda no WhatsApp → Evolution → webhook `crm-web` → grava lead/mensagem → agente Claude responde (tom da marca em `crm/crm-web/lib/ai/business-context.ts`, sincronizar com `_memoria/*`) → Kanban. Hervesson pode "Assumir" (pausa a IA). O form de captura do site (`site/components/sections/lead-form.tsx`) posta pro CRM via `NEXT_PUBLIC_CRM_LEADS_URL`. ⚠️ modo Baileys viola ToS da Meta (risco de ban); custo da Claude API por conversa (começar no Haiku)
 - Outras regras que aparecerem com o uso
 
 ## Ferramentas conectadas

@@ -1,0 +1,57 @@
+// CRM — banco "crm" (a Evolution mantém o próprio schema no banco "evolution")
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Stage {
+  NOVO
+  QUALIFICANDO
+  QUALIFICADO
+  PROPOSTA
+  FECHADO
+  PERDIDO
+}
+
+model Lead {
+  id        String    @id @default(cuid())
+  name      String?
+  phone     String?   @unique // número normalizado (só dígitos, com DDI)
+  email     String?
+  source    String    @default("whatsapp") // whatsapp | site-form | manual
+  stage     Stage     @default(NOVO)
+  aiPaused  Boolean   @default(false) // Hervesson assumiu a conversa?
+  summary   String? // resumo/qualificação gerada pela IA
+  note      String? // anotação manual do Hervesson
+  order     Int       @default(0) // posição dentro da coluna do Kanban
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  messages  Message[]
+
+  @@index([stage])
+}
+
+model Message {
+  id          String   @id @default(cuid())
+  leadId      String
+  lead        Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  direction   String // "in" (lead→nós) | "out" (nós→lead)
+  author      String // "lead" | "ia" | "hervesson"
+  body        String
+  waMessageId String?  @unique // id da msg na Evolution (dedupe)
+  raw         Json?
+  createdAt   DateTime @default(now())
+
+  @@index([leadId, createdAt])
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  passHash  String
+  createdAt DateTime @default(now())
+}

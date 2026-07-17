@@ -1,5 +1,6 @@
 import { MessageCircle, Mail } from "lucide-react"
 import { site } from "@/lib/site"
+import { LeadForm } from "@/components/sections/lead-form"
 
 export function ContactCta() {
   return (
@@ -32,6 +33,7 @@ export function ContactCta() {
               Prefiro e-mail
             </a>
           </div>
+          <LeadForm />
         </div>
       </div>
     </section>
