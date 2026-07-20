@@ -28,11 +28,10 @@ ENV PORT=3000
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
-# Prisma: schema, migrations, client e CLI para rodar migrate deploy no start
+# node_modules completo (não só o trace do standalone) para o CLI do Prisma
+# (fica em devDependencies) estar disponível — "prisma migrate deploy" roda no start
+COPY --from=deps /app/node_modules ./node_modules
 COPY --from=builder /app/prisma ./prisma
-COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
-COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
-COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
 COPY --from=builder /app/scripts ./scripts
 COPY docker-entrypoint.sh ./docker-entrypoint.sh
 RUN chmod +x ./docker-entrypoint.sh
