@@ -82,6 +82,13 @@ Easypanel mostra na página do serviço).
   Ajuste `DATABASE_CONNECTION_URI` e `CACHE_REDIS_URI` para as URLs internas reais
   que o Easypanel te deu nos passos 2 e 3.
 
+  **Opcional — ticks de entrega (✓/✓✓) no WhatsApp do painel:** acrescente
+  `WEBHOOK_EVENTS_MESSAGES_UPDATE=true` nessa mesma lista. Sem isso, toda
+  mensagem enviada pelo painel fica marcada só como "enviada" (nunca vira
+  "entregue"/"lida"). O parsing desse evento no `crm-web` (`app/api/whatsapp/webhook/route.ts`)
+  ainda não foi testado contra tráfego real — se os ticks não avançarem depois
+  de ligar isso, o formato do payload pode precisar de ajuste.
+
 ## 5. `crm-web` — o painel (App a partir do repositório)
 
 - Create Service → **App**. Nome: `crm-web`.
@@ -89,6 +96,9 @@ Easypanel mostra na página do serviço).
 - **Build → Dockerfile.** Defina o **diretório raiz/monorepo** como `crm/crm-web`
   (é onde estão o `Dockerfile` e o `package.json`).
 - **Port:** `3000`
+- **Volume:** monte um volume em `/app/public/uploads` (persiste os arquivos
+  anexados nas conversas do WhatsApp — sem isso, todo anexo enviado pelo painel
+  some no próximo restart/redeploy do container).
 - **Domain:** atribua `crm.trinctecnologies.com.br` (SSL automático). Este é o
   painel e também o endpoint que o formulário do site vai chamar.
 - **Environment:**

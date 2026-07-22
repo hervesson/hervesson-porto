@@ -17,11 +17,10 @@ export default async function LeadPage({
 
   return (
     <div className="h-full flex flex-col">
-      <div className="px-4 sm:px-6 py-3 border-b border-line flex items-center gap-3">
-        <Link href="/kanban" className="text-muted hover:text-cream">
-          <ArrowLeft size={18} />
+      <div className="px-4 sm:px-6 py-2 border-b border-line flex items-center gap-3 shrink-0">
+        <Link href="/kanban" className="text-muted hover:text-cream flex items-center gap-1.5 text-sm">
+          <ArrowLeft size={16} /> Kanban
         </Link>
-        <h1 className="font-semibold">{lead.name ?? "Lead sem nome"}</h1>
       </div>
       <LeadDetail leadId={lead.id} />
     </div>

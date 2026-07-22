@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { jidToPhone } from "@/lib/phone";
 import { runAgent } from "@/lib/ai/agent";
+import { createLeadNotification } from "@/lib/notifications";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -21,18 +22,45 @@ function extractText(message: Record<string, unknown> | undefined): string {
   );
 }
 
+// Mapeia o status de entrega da Evolution/Baileys pro nosso enum simples.
+// Best-effort: a Evolution manda ora string (ex. "DELIVERY_ACK"), ora o
+// código numérico do Baileys (WAMessageStatus). Cobre os dois formatos —
+// ajustar aqui se o payload real vier diferente (não verificado em produção
+// ainda, precisa do evento MESSAGES_UPDATE habilitado na Evolution).
+function mapDeliveryStatus(raw: unknown): string | null {
+  const s = String(raw ?? "").toUpperCase();
+  if (s === "0" || s === "ERROR") return "failed";
+  if (s === "1" || s === "2" || s === "PENDING" || s === "SERVER_ACK") return "sent";
+  if (s === "3" || s === "DELIVERY_ACK") return "delivered";
+  if (s === "4" || s === "5" || s === "READ" || s === "PLAYED") return "read";
+  return null;
+}
+
 export async function POST(req: Request) {
   const payload = await req.json().catch(() => null);
   if (!payload) return NextResponse.json({ ok: true });
 
   const event: string = payload.event ?? payload.type ?? "";
+  const items = Array.isArray(payload.data) ? payload.data : [payload.data];
+
+  if (event === "messages.update") {
+    for (const data of items) {
+      try {
+        const waMessageId: string | undefined = data?.keyId ?? data?.key?.id;
+        const status = mapDeliveryStatus(data?.status ?? data?.update?.status);
+        if (!waMessageId || !status) continue;
+        await prisma.message.updateMany({ where: { waMessageId }, data: { status } });
+      } catch (err) {
+        console.error("[webhook] erro atualizando status de entrega:", err);
+      }
+    }
+    return NextResponse.json({ ok: true });
+  }
+
   if (event !== "messages.upsert") {
     // outros eventos (connection.update etc.) — só confirma
     return NextResponse.json({ ok: true });
   }
-
-  // A Evolution pode mandar data como objeto único ou array.
-  const items = Array.isArray(payload.data) ? payload.data : [payload.data];
 
   for (const data of items) {
     try {
@@ -56,11 +84,14 @@ export async function POST(req: Request) {
       }
 
       // acha ou cria o lead pelo telefone
-      const lead = await prisma.lead.upsert({
-        where: { phone },
-        update: { name: undefined },
-        create: { phone, name: pushName, source: "whatsapp" },
-      });
+      const existingLead = await prisma.lead.findUnique({ where: { phone } });
+      const lead =
+        existingLead ??
+        (await prisma.lead.create({ data: { phone, name: pushName, source: "whatsapp" } }));
+
+      if (!existingLead) {
+        await createLeadNotification(lead);
+      }
 
       await prisma.message.create({
         data: {

@@ -2,18 +2,24 @@
 
 import { useState } from "react"
 import { Loader2, Check } from "lucide-react"
+import { maskPhoneBR, isValidPhoneBR } from "@/lib/phone"
 
-// URL do endpoint de captura do CRM (Cloudflare Tunnel), injetada no build.
+// URL do endpoint de captura do CRM (Easypanel, domínio público), injetada no build.
 const CRM_URL = process.env.NEXT_PUBLIC_CRM_LEADS_URL
 
 export function LeadForm() {
   const [name, setName] = useState("")
   const [phone, setPhone] = useState("")
+  const [email, setEmail] = useState("")
   const [message, setMessage] = useState("")
-  const [status, setStatus] = useState<"idle" | "sending" | "ok" | "error">("idle")
+  const [status, setStatus] = useState<"idle" | "sending" | "ok" | "error" | "invalid-phone">("idle")
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault()
+    if (!isValidPhoneBR(phone)) {
+      setStatus("invalid-phone")
+      return
+    }
     if (!CRM_URL) {
       setStatus("error")
       return
@@ -23,7 +29,7 @@ export function LeadForm() {
       const res = await fetch(CRM_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, phone, message, source: "site-form" }),
+        body: JSON.stringify({ name, phone, email, message, source: "site-form" }),
       })
       setStatus(res.ok ? "ok" : "error")
     } catch {
@@ -55,10 +61,20 @@ export function LeadForm() {
       />
       <input
         value={phone}
-        onChange={(e) => setPhone(e.target.value)}
+        onChange={(e) => setPhone(maskPhoneBR(e.target.value))}
         placeholder="WhatsApp (com DDD)"
         required
+        type="tel"
         inputMode="tel"
+        className="rounded-lg bg-white/5 border border-white/15 px-4 py-3 text-white placeholder:text-gray-400 outline-none focus:border-brand"
+      />
+      <input
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        placeholder="Seu e-mail"
+        required
+        type="email"
+        inputMode="email"
         className="rounded-lg bg-white/5 border border-white/15 px-4 py-3 text-white placeholder:text-gray-400 outline-none focus:border-brand"
       />
       <textarea
@@ -79,6 +95,11 @@ export function LeadForm() {
       {status === "error" && (
         <p className="text-sm text-red-300 text-center">
           Não consegui enviar agora. Me chama no WhatsApp acima, por favor.
+        </p>
+      )}
+      {status === "invalid-phone" && (
+        <p className="text-sm text-red-300 text-center">
+          Confere o número do WhatsApp — falta dígito.
         </p>
       )}
     </form>

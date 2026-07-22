@@ -22,15 +22,27 @@ model Lead {
   name      String?
   phone     String?   @unique // número normalizado (só dígitos, com DDI)
   email     String?
-  source    String    @default("whatsapp") // whatsapp | site-form | manual
+  company   String? // empresa do lead
+  position  String? // cargo do lead
+  value     Int? // valor estimado do negócio, em R$
+  tags      String[] @default([])
+  source    String    @default("whatsapp") // whatsapp | site-form | manual | ver lib/lead-origin.ts
   stage     Stage     @default(NOVO)
   aiPaused  Boolean   @default(false) // Hervesson assumiu a conversa?
   summary   String? // resumo/qualificação gerada pela IA
   note      String? // anotação manual do Hervesson
   order     Int       @default(0) // posição dentro da coluna do Kanban
+  lastReadAt DateTime @default(now()) // até quando o Hervesson já leu a conversa
+  // Campos de cliente ativo — só fazem sentido quando stage = FECHADO (ver /clientes)
+  billingType String? // projeto (valor único, usa "value") | retainer (mensalidade, usa mrr/health/clientSince)
+  mrr         Int? // receita recorrente mensal — só retainer
+  health      String? // otimo | bom | atencao | risco — só retainer
+  clientSince DateTime? // quando virou cliente ativo — só retainer
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   messages  Message[]
+  notifications Notification[]
+  transactions Transaction[]
 
   @@index([stage])
 }
@@ -42,6 +54,10 @@ model Message {
   direction   String // "in" (lead→nós) | "out" (nós→lead)
   author      String // "lead" | "ia" | "hervesson"
   body        String
+  status      String   @default("sent") // sent | delivered | read | failed (msgs "out"; via webhook da Evolution)
+  mediaUrl    String? // /uploads/... — arquivo anexado, se houver
+  mediaType   String? // image | document | video | audio
+  fileName    String?
   waMessageId String?  @unique // id da msg na Evolution (dedupe)
   raw         Json?
   createdAt   DateTime @default(now())
@@ -54,4 +70,35 @@ model User {
   email     String   @unique
   passHash  String
   createdAt DateTime @default(now())
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  leadId    String?
+  lead      Lead?    @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  type      String // snapshot do lead.source no momento da criação — ver lib/lead-origin.ts
+  title     String
+  body      String?
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([read])
+}
+
+model Transaction {
+  id          String   @id @default(cuid())
+  type        String // receita | despesa
+  description String
+  value       Int // em R$
+  category    String // ver lib/transactions.ts (categorias diferentes por type)
+  method      String // pix | cartao | boleto | transferencia | dinheiro | outro
+  status      String   @default("pago") // pago | pendente | atrasado
+  date        DateTime @default(now()) // data do lançamento (pode ser retroativa)
+  leadId      String? // opcional — vincula a um cliente (ex: receita de um retainer específico)
+  lead        Lead?    @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  createdAt   DateTime @default(now())
+
+  @@index([date])
+  @@index([type])
 }

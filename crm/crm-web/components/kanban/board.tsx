@@ -10,15 +10,22 @@ import {
   useDraggable,
   type DragEndEvent,
 } from "@dnd-kit/core";
-import Link from "next/link";
+import { Plus } from "lucide-react";
 import { STAGES } from "@/lib/stages";
 import { formatPhone } from "@/lib/phone";
+import { originLabel } from "@/lib/lead-origin";
+import { formatBRL } from "@/lib/money";
+import NewLeadModal from "./new-lead-modal";
+import LeadPanel from "./lead-panel";
 
 export type LeadCard = {
   id: string;
   name: string | null;
   phone: string | null;
   email: string | null;
+  company: string | null;
+  value: number | null;
+  tags: string[];
   source: string;
   stage: string;
   aiPaused: boolean;
@@ -28,7 +35,7 @@ export type LeadCard = {
   _count: { messages: number };
 };
 
-function Card({ lead }: { lead: LeadCard }) {
+function Card({ lead, onOpen }: { lead: LeadCard; onOpen: (id: string) => void }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } =
     useDraggable({ id: lead.id });
   const style = transform
@@ -40,14 +47,17 @@ function Card({ lead }: { lead: LeadCard }) {
     <div
       ref={setNodeRef}
       style={style}
-      className={`bg-surface-2 border border-line rounded-xl p-3 select-none ${
+      onClick={() => onOpen(lead.id)}
+      className={`bg-surface-2 border border-line rounded-xl p-3 select-none cursor-pointer hover:border-brand/40 transition ${
         isDragging ? "opacity-50" : ""
       }`}
     >
       <div className="flex items-start justify-between gap-2" {...listeners} {...attributes}>
         <div className="min-w-0">
           <p className="font-medium truncate">{lead.name ?? "Sem nome"}</p>
-          <p className="text-xs text-muted truncate">{formatPhone(lead.phone)}</p>
+          <p className="text-xs text-muted truncate">
+            {lead.company ? lead.company : formatPhone(lead.phone)}
+          </p>
         </div>
         {lead.aiPaused ? (
           <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-300 shrink-0">
@@ -60,32 +70,37 @@ function Card({ lead }: { lead: LeadCard }) {
         )}
       </div>
 
+      {lead.tags.length > 0 && (
+        <div className="flex flex-wrap gap-1 mt-2">
+          {lead.tags.map((tag) => (
+            <span
+              key={tag}
+              className="text-[10px] px-1.5 py-0.5 rounded bg-surface border border-line text-muted"
+            >
+              {tag}
+            </span>
+          ))}
+        </div>
+      )}
+
       {lead.summary && (
         <p className="text-xs text-muted mt-2 line-clamp-2">{lead.summary}</p>
       )}
-      {last && (
+      {last && last.body !== lead.summary && (
         <p className="text-xs text-cream/70 mt-2 line-clamp-1">
           {last.direction === "in" ? "" : "→ "}
           {last.body}
         </p>
       )}
 
-      <div className="flex items-center justify-between mt-2">
+      <div className="mt-2">
         <span className="text-[10px] text-muted">
-          {lead._count.messages} msg · {sourceLabel(lead.source)}
+          {lead.value ? `${formatBRL(lead.value)} · ` : ""}
+          {lead._count.messages} msg · {originLabel(lead.source)}
         </span>
-        <Link href={`/lead/${lead.id}`} className="text-[11px] text-brand hover:underline">
-          abrir →
-        </Link>
       </div>
     </div>
   );
-}
-
-function sourceLabel(s: string) {
-  if (s === "whatsapp") return "WhatsApp";
-  if (s === "site-form") return "Site";
-  return "Manual";
 }
 
 function Column({
@@ -93,11 +108,13 @@ function Column({
   label,
   accent,
   leads,
+  onOpen,
 }: {
   stageKey: string;
   label: string;
   accent: string;
   leads: LeadCard[];
+  onOpen: (id: string) => void;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: stageKey });
   return (
@@ -114,7 +131,7 @@ function Column({
         }`}
       >
         {leads.map((lead) => (
-          <Card key={lead.id} lead={lead} />
+          <Card key={lead.id} lead={lead} onOpen={onOpen} />
         ))}
       </div>
     </div>
@@ -124,6 +141,8 @@ function Column({
 export default function Board() {
   const [leads, setLeads] = useState<LeadCard[]>([]);
   const [loaded, setLoaded] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [openLeadId, setOpenLeadId] = useState<string | null>(null);
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
   );
@@ -161,25 +180,50 @@ export default function Board() {
     });
   }
 
-  if (!loaded) {
-    return <div className="p-6 text-muted">Carregando leads…</div>;
-  }
-
   return (
-    <DndContext sensors={sensors} onDragEnd={onDragEnd}>
-      <div className="flex-1 overflow-x-auto">
-        <div className="flex gap-3 p-4 h-full min-h-0">
-          {STAGES.map((s) => (
-            <Column
-              key={s.key}
-              stageKey={s.key}
-              label={s.label}
-              accent={s.accent}
-              leads={leads.filter((l) => l.stage === s.key)}
-            />
-          ))}
-        </div>
+    <div className="h-full flex flex-col">
+      <div className="px-4 sm:px-6 py-3 flex items-center justify-between gap-3">
+        <h1 className="text-lg font-semibold">CRM</h1>
+        <button
+          onClick={() => setModalOpen(true)}
+          className="flex items-center gap-1.5 bg-brand text-brand-ink text-sm font-medium rounded-lg px-3 py-2 hover:opacity-90 transition"
+        >
+          <Plus size={16} /> Novo lead
+        </button>
       </div>
-    </DndContext>
+
+      {!loaded ? (
+        <div className="p-6 text-muted">Carregando leads…</div>
+      ) : (
+        <DndContext sensors={sensors} onDragEnd={onDragEnd}>
+          <div className="flex-1 overflow-x-auto">
+            <div className="flex gap-3 p-4 h-full min-h-0">
+              {STAGES.map((s) => (
+                <Column
+                  key={s.key}
+                  stageKey={s.key}
+                  label={s.label}
+                  accent={s.accent}
+                  leads={leads.filter((l) => l.stage === s.key)}
+                  onOpen={setOpenLeadId}
+                />
+              ))}
+            </div>
+          </div>
+        </DndContext>
+      )}
+
+      {modalOpen && (
+        <NewLeadModal onClose={() => setModalOpen(false)} onCreated={load} />
+      )}
+
+      {openLeadId && (
+        <LeadPanel
+          leadId={openLeadId}
+          onClose={() => setOpenLeadId(null)}
+          onUpdated={load}
+        />
+      )}
+    </div>
   );
 }

@@ -22,7 +22,7 @@ WORKDIR /app
 RUN apk add --no-cache openssl
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
-ENV PORT=3002
+ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
 # Next standalone
@@ -37,5 +37,5 @@ COPY --from=builder /app/scripts ./scripts
 COPY docker-entrypoint.sh ./docker-entrypoint.sh
 RUN chmod +x ./docker-entrypoint.sh
 
-EXPOSE 3002
+EXPOSE 3000
 ENTRYPOINT ["./docker-entrypoint.sh"]

@@ -4,3 +4,6 @@ next-env.d.ts
 *.tsbuildinfo
 .env
 .env.local
+
+# anexos enviados pelo painel — arquivo real, não versionar
+public/uploads/

@@ -22,9 +22,11 @@
 
 ## Tipografia
 
-- **Títulos e destaques:** Typo Angular Rounded
+- **Fonte oficial:** Plus Jakarta Sans (Google Fonts) — confirmado em `site/app/layout.tsx` (`next/font/google`) e replicado no CRM (`crm/crm-web/app/layout.tsx`) em 2026-07-22, pra manter a mesma identidade entre os dois. Substitui a referência antiga a "Inter"/"Typo Angular Rounded" que estava desatualizada aqui.
 
-- **Corpo, subtítulos e botões:** Typo Angular Rounded
+- **Títulos e destaques:** Plus Jakarta Sans
+
+- **Corpo, subtítulos e botões:** Plus Jakarta Sans
 
 - **Peso do título:** não informado
 

@@ -28,6 +28,26 @@ export async function sendText(phone: string, text: string) {
   });
 }
 
+// Envia mídia (imagem/documento/vídeo/áudio). `media` = base64 sem o prefixo
+// "data:...;base64,". Best-effort — formato do payload não testado ainda
+// contra a Evolution real, ajustar se o envio falhar.
+export async function sendMedia(
+  phone: string,
+  opts: { mediatype: string; mimetype: string; media: string; fileName: string; caption?: string },
+) {
+  return ev(`/message/sendMedia/${INSTANCE}`, {
+    method: "POST",
+    body: JSON.stringify({
+      number: phone,
+      mediatype: opts.mediatype,
+      mimetype: opts.mimetype,
+      media: opts.media,
+      fileName: opts.fileName,
+      caption: opts.caption ?? "",
+    }),
+  });
+}
+
 // Estado da conexão da instância ("open" = conectado).
 export async function connectionState(): Promise<string> {
   try {
