@@ -24,6 +24,7 @@ type Lead = {
   name: string | null;
   phone: string | null;
   email: string | null;
+  avatarUrl: string | null;
   company: string | null;
   source: string;
   stage: string;
@@ -187,9 +188,18 @@ export default function LeadDetail({ leadId }: { leadId: string }) {
     <div className="flex-1 min-h-0 flex flex-col">
       <div className="border-b border-line px-4 py-3 flex items-center justify-between gap-3 shrink-0">
         <div className="flex items-center gap-3 min-w-0">
-          <span className="w-9 h-9 rounded-full bg-brand/15 text-brand text-xs font-medium flex items-center justify-center shrink-0">
-            {initials || "?"}
-          </span>
+          {lead.avatarUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={lead.avatarUrl}
+              alt=""
+              className="w-9 h-9 rounded-full object-cover shrink-0"
+            />
+          ) : (
+            <span className="w-9 h-9 rounded-full bg-brand/15 text-brand text-xs font-medium flex items-center justify-center shrink-0">
+              {initials || "?"}
+            </span>
+          )}
           <div className="min-w-0">
             <p className="text-sm font-medium truncate">{lead.name ?? formatPhone(lead.phone)}</p>
             {lead.company && <p className="text-xs text-muted truncate">{lead.company}</p>}

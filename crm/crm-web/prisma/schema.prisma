@@ -22,6 +22,7 @@ model Lead {
   name      String?
   phone     String?   @unique // número normalizado (só dígitos, com DDI)
   email     String?
+  avatarUrl String? // foto de perfil do WhatsApp (best-effort, via Evolution)
   company   String? // empresa do lead
   position  String? // cargo do lead
   value     Int? // valor estimado do negócio, em R$

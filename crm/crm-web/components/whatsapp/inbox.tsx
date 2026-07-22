@@ -12,6 +12,7 @@ type ConversationLead = {
   name: string | null;
   phone: string | null;
   company: string | null;
+  avatarUrl: string | null;
   aiPaused: boolean;
   updatedAt: string;
   unreadCount: number;
@@ -60,7 +61,15 @@ export default function WhatsappInbox({ online }: { online: boolean }) {
           l.company?.toLowerCase().includes(q) ||
           l.phone?.includes(q),
       )
-      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+      .sort((a, b) => {
+        // ordena pela última MENSAGEM, não por `updatedAt` — esse campo é
+        // bumpado pelo Prisma em qualquer update do lead (ex.: abrir a
+        // conversa já marca como lida e mexe no lead), o que fazia a
+        // conversa pular pro topo só de ser aberta, sem mensagem nova.
+        const aTime = new Date(a.messages[0]?.createdAt ?? a.updatedAt).getTime();
+        const bTime = new Date(b.messages[0]?.createdAt ?? b.updatedAt).getTime();
+        return bTime - aTime;
+      });
   }, [leads, query]);
 
   const selected = leads.find((l) => l.id === selectedId);
@@ -132,9 +141,18 @@ export default function WhatsappInbox({ online }: { online: boolean }) {
                       selectedId === lead.id ? "bg-surface-2" : ""
                     }`}
                   >
-                    <span className="w-9 h-9 rounded-full bg-brand/15 text-brand text-xs font-medium flex items-center justify-center shrink-0">
-                      {initialsOf(lead.name) || "?"}
-                    </span>
+                    {lead.avatarUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={lead.avatarUrl}
+                        alt=""
+                        className="w-9 h-9 rounded-full object-cover shrink-0"
+                      />
+                    ) : (
+                      <span className="w-9 h-9 rounded-full bg-brand/15 text-brand text-xs font-medium flex items-center justify-center shrink-0">
+                        {initialsOf(lead.name) || "?"}
+                      </span>
+                    )}
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center justify-between gap-2">
                         <p

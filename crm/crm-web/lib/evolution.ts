@@ -48,6 +48,20 @@ export async function sendMedia(
   });
 }
 
+// Busca a foto de perfil do WhatsApp do número. Best-effort: retorna null se
+// não existir foto, o número não estiver no WhatsApp, ou a Evolution falhar.
+export async function fetchProfilePicture(phone: string): Promise<string | null> {
+  try {
+    const data = await ev(`/chat/fetchProfilePictureUrl/${INSTANCE}`, {
+      method: "POST",
+      body: JSON.stringify({ number: phone }),
+    });
+    return data?.profilePictureUrl ?? null;
+  } catch {
+    return null;
+  }
+}
+
 // Estado da conexão da instância ("open" = conectado).
 export async function connectionState(): Promise<string> {
   try {

@@ -77,7 +77,7 @@ export default function AppShell({
   }
 
   return (
-    <div className="min-h-screen flex">
+    <div className="h-screen flex">
       <Sidebar
         email={email}
         collapsed={collapsed}

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { jidToPhone } from "@/lib/phone";
 import { runAgent } from "@/lib/ai/agent";
 import { createLeadNotification } from "@/lib/notifications";
+import { fetchProfilePicture } from "@/lib/evolution";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -91,6 +92,19 @@ export async function POST(req: Request) {
 
       if (!existingLead) {
         await createLeadNotification(lead);
+      }
+
+      // busca a foto de perfil best-effort — só tenta enquanto o lead não
+      // tiver uma (evita bater na Evolution toda mensagem à toa)
+      if (!lead.avatarUrl) {
+        try {
+          const avatarUrl = await fetchProfilePicture(phone);
+          if (avatarUrl) {
+            await prisma.lead.update({ where: { id: lead.id }, data: { avatarUrl } });
+          }
+        } catch (err) {
+          console.error("[webhook] erro buscando avatar:", err);
+        }
       }
 
       await prisma.message.create({
