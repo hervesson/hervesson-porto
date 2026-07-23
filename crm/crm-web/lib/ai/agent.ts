@@ -2,6 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import type { Message as DbMessage, Lead, Stage } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { sendText } from "@/lib/evolution";
+import { createAiPausedNotification } from "@/lib/notifications";
 import { SYSTEM_PROMPT } from "./prompt";
 
 const client = new Anthropic(); // usa ANTHROPIC_API_KEY do ambiente
@@ -9,6 +10,12 @@ const MODEL = process.env.AI_MODEL ?? "claude-haiku-4-5";
 
 // Quantas mensagens de histórico mandar como contexto (mantém custo baixo).
 const HISTORY_LIMIT = 30;
+
+// Trava de segurança: se a IA já respondeu esse tanto de vezes seguidas sem
+// nenhum humano entrar na conversa, pausa sozinha e avisa. Protege contra
+// loop com outro bot/IA (ex.: um SDR automatizado de outra empresa) que
+// ficaria conversando com a nossa IA indefinidamente.
+const AI_TURN_LIMIT = 8;
 
 // Tool que a IA é forçada a chamar: devolve a resposta + a extração estruturada.
 // `strict: true` (structured outputs) é aceito pela API mas ainda não tipado no SDK.
@@ -125,14 +132,37 @@ export async function runAgent(lead: Lead): Promise<void> {
   });
 
   const nextStage: Stage = input.needs_human ? "QUALIFICADO" : input.suggested_stage;
+  // Se a IA decidiu passar pro humano, pausa o atendimento automático.
+  let aiPaused = input.needs_human ? true : lead.aiPaused;
+
+  if (!aiPaused) {
+    // conta quantas mensagens a IA mandou desde a última vez que o
+    // Hervesson escreveu nessa conversa — se passar do limite sem nenhum
+    // humano entrar, é sinal de loop (ex.: outro bot do outro lado)
+    const lastHuman = await prisma.message.findFirst({
+      where: { leadId: lead.id, author: "hervesson" },
+      orderBy: { createdAt: "desc" },
+    });
+    const iaCount = await prisma.message.count({
+      where: {
+        leadId: lead.id,
+        author: "ia",
+        ...(lastHuman ? { createdAt: { gt: lastHuman.createdAt } } : {}),
+      },
+    });
+    if (iaCount >= AI_TURN_LIMIT) {
+      aiPaused = true;
+      await createAiPausedNotification(lead);
+    }
+  }
+
   await prisma.lead.update({
     where: { id: lead.id },
     data: {
       name: lead.name ?? (input.lead_name?.trim() || undefined),
       summary: input.summary || lead.summary,
       stage: nextStage,
-      // Se a IA decidiu passar pro humano, pausa o atendimento automático.
-      aiPaused: input.needs_human ? true : lead.aiPaused,
+      aiPaused,
     },
   });
 }

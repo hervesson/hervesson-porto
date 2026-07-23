@@ -30,3 +30,13 @@ body {
 button {
   font-family: inherit;
 }
+
+/* Esconde a barra de rolagem em todo o painel — continua rolando por mouse/
+   trackpad/touch normalmente, só não mostra a barra padrão do navegador. */
+* {
+  scrollbar-width: none; /* Firefox */
+}
+
+*::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Edge */
+}

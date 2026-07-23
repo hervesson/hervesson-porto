@@ -118,15 +118,15 @@ function Column({
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: stageKey });
   return (
-    <div className="w-72 shrink-0 flex flex-col">
-      <div className="flex items-center gap-2 px-1 pb-2">
+    <div className="w-72 shrink-0 flex flex-col min-h-0 h-full">
+      <div className="flex items-center gap-2 px-1 pb-2 shrink-0">
         <span className="w-2 h-2 rounded-full" style={{ background: accent }} />
         <span className="text-sm font-medium">{label}</span>
         <span className="text-xs text-muted">{leads.length}</span>
       </div>
       <div
         ref={setNodeRef}
-        className={`flex-1 min-h-24 rounded-xl p-2 flex flex-col gap-2 border ${
+        className={`flex-1 min-h-24 overflow-y-auto rounded-xl p-2 flex flex-col gap-2 border ${
           isOver ? "border-brand bg-surface/60" : "border-line/50 bg-surface/30"
         }`}
       >
@@ -196,7 +196,7 @@ export default function Board() {
         <div className="p-6 text-muted">Carregando leads…</div>
       ) : (
         <DndContext sensors={sensors} onDragEnd={onDragEnd}>
-          <div className="flex-1 overflow-x-auto">
+          <div className="flex-1 min-h-0 overflow-x-auto">
             <div className="flex gap-3 p-4 h-full min-h-0">
               {STAGES.map((s) => (
                 <Column

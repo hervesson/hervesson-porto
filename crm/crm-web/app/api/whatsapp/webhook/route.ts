@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { jidToPhone } from "@/lib/phone";
-import { runAgent } from "@/lib/ai/agent";
+import { scheduleAgentRun } from "@/lib/ai/agent-scheduler";
 import { createLeadNotification } from "@/lib/notifications";
 import { fetchProfilePicture } from "@/lib/evolution";
 
@@ -118,8 +118,10 @@ export async function POST(req: Request) {
         },
       });
 
-      // aciona a IA (a função checa aiPaused internamente)
-      await runAgent(lead);
+      // agenda a IA com debounce — se chegar outra mensagem desse lead nos
+      // próximos segundos, agrupa num único turno em vez de responder cada
+      // mensagem separadamente (aiPaused é checado de novo lá dentro)
+      scheduleAgentRun(lead.id);
     } catch (err) {
       console.error("[webhook] erro processando mensagem:", err);
       // não falha o webhook inteiro por causa de uma mensagem
