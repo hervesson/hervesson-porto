@@ -1,4 +1,4 @@
-import { Kanban, MessageCircle, Users, Wallet, type LucideIcon } from "lucide-react";
+import { Calendar, Kanban, MessageCircle, Users, Wallet, type LucideIcon } from "lucide-react";
 
 export type NavItem = {
   label: string;
@@ -18,6 +18,7 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { label: "CRM", href: "/kanban", icon: Kanban },
       { label: "Clientes", href: "/clientes", icon: Users },
+      { label: "Agenda", href: "/agenda", icon: Calendar },
     ],
   },
   {

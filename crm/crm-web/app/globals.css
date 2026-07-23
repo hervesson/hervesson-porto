@@ -31,12 +31,29 @@ button {
   font-family: inherit;
 }
 
-/* Esconde a barra de rolagem em todo o painel — continua rolando por mouse/
-   trackpad/touch normalmente, só não mostra a barra padrão do navegador. */
+/* Barra de rolagem fina e discreta em todo o painel — some a barra grossa
+   padrão do navegador, mas continua visível (diferente de escondida de
+   vez): sem isso, conteúdo que passa da tela fica sem nenhuma pista de que
+   dá pra rolar até ele. */
 * {
-  scrollbar-width: none; /* Firefox */
+  scrollbar-width: thin; /* Firefox */
+  scrollbar-color: var(--color-line) transparent;
 }
 
 *::-webkit-scrollbar {
-  display: none; /* Chrome, Safari, Edge */
+  width: 8px;
+  height: 8px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: var(--color-line);
+  border-radius: 9999px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--color-muted);
 }

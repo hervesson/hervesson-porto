@@ -114,6 +114,8 @@ Easypanel mostra na página do serviço).
   ADMIN_PASSWORD_HASH=<hash bcrypt — ver abaixo>
   PUBLIC_PANEL_URL=https://crm.trinctecnologies.com.br
   CORS_ALLOW_ORIGIN=https://www.trinctecnologies.com.br
+  GOOGLE_CLIENT_ID=<client id do Google Cloud Console — ver seção 8>
+  GOOGLE_CLIENT_SECRET=<client secret do Google Cloud Console — ver seção 8>
   ```
 - O container roda `prisma migrate deploy` + cria o usuário admin no start
   (via `docker-entrypoint.sh`), então o banco `crm` é preparado sozinho.
@@ -123,6 +125,38 @@ Easypanel mostra na página do serviço).
 Localmente: `node crm/crm-web/scripts/hash-senha.mjs "suaSenha"` — cole a saída.
 (ou pelo Console do serviço `crm-web` no Easypanel, depois do 1º deploy:
 `node scripts/hash-senha.mjs "suaSenha"`.)
+
+---
+
+## 8. Agenda — conectar o Google Calendar
+
+A Agenda (`/agenda`) sincroniza com o Google Calendar via OAuth2. Isso exige
+criar credenciais no Google Cloud Console **antes** de conectar pelo painel —
+não tem como pular esse passo.
+
+1. `console.cloud.google.com` → criar/selecionar um projeto (ex.: "Hervesson CRM").
+2. **APIs & Services → Library** → habilitar **Google Calendar API**.
+3. **APIs & Services → OAuth consent screen**:
+   - User type: **External**.
+   - Nome do app, e-mail de suporte e de contato: `hervessonporto@gmail.com`.
+   - Escopo: `https://www.googleapis.com/auth/calendar.events`.
+   - Test users: adicione `hervessonporto@gmail.com`.
+   - **Publishing status → "In production"**. Isso é obrigatório — em modo
+     "Testing" o `refresh_token` expira em 7 dias e a Agenda para de
+     sincronizar sozinha toda semana. Não precisa de verificação do Google
+     pra fazer isso (só 1 usuário, escopo não-sensível a ponto de exigir
+     review) — só aparece uma tela "app não verificado" que você clica
+     através uma vez, ao conectar.
+4. **APIs & Services → Credentials → Create Credentials → OAuth client ID**:
+   - Tipo: **Web application**.
+   - Authorized redirect URIs:
+     `https://crm.trinctecnologies.com.br/api/google/callback`
+     (e, se for testar local: `http://localhost:3000/api/google/callback`).
+   - Copie o **Client ID** e o **Client Secret**.
+5. Cole os dois nas env vars `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` do
+   serviço `crm-web` (seção 5 acima) e redeploy.
+6. Abra `/agenda` no painel e clique em "Conectar Google Agenda" — o resto do
+   fluxo é automático (não precisa mexer em nada manualmente depois disso).
 
 ---
 

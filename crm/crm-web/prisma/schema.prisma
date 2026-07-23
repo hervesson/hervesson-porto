@@ -44,6 +44,7 @@ model Lead {
   messages  Message[]
   notifications Notification[]
   transactions Transaction[]
+  events    Event[]
 
   @@index([stage])
 }
@@ -71,6 +72,11 @@ model User {
   email     String   @unique
   passHash  String
   createdAt DateTime @default(now())
+  // Tokens OAuth do Google Calendar — só existe 1 User nesse app, então
+  // guarda direto aqui em vez de criar uma tabela de tokens separada.
+  googleAccessToken  String?
+  googleRefreshToken String?
+  googleTokenExpiry  DateTime?
 }
 
 model Notification {
@@ -85,6 +91,21 @@ model Notification {
 
   @@index([createdAt])
   @@index([read])
+}
+
+model Event {
+  id            String   @id @default(cuid())
+  title         String
+  description   String?
+  startAt       DateTime
+  endAt         DateTime
+  leadId        String?
+  lead          Lead?    @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  googleEventId String?  @unique // id do evento correspondente no Google Calendar
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([startAt])
 }
 
 model Transaction {
