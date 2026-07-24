@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, useMemo } from "react";
 import { Plus, Wallet } from "lucide-react";
 import { formatBRL } from "@/lib/money";
 import { categoryLabel, methodLabel, statusInfo, DESPESA_CATEGORIES } from "@/lib/transactions";
+import StatCard from "@/components/ui/stat-card";
 import NewTransactionModal from "./new-transaction-modal";
 
 type Tx = {
@@ -287,29 +288,6 @@ export default function FinanceView() {
       {modalOpen && (
         <NewTransactionModal onClose={() => setModalOpen(false)} onCreated={load} />
       )}
-    </div>
-  );
-}
-
-function StatCard({
-  label,
-  value,
-  tone,
-}: {
-  label: string;
-  value: string;
-  tone?: "pos" | "neg";
-}) {
-  return (
-    <div className="bg-surface-2 border border-line rounded-xl p-4">
-      <p className="text-xs text-muted mb-1">{label}</p>
-      <p
-        className={`text-xl font-semibold ${
-          tone === "pos" ? "text-emerald-300" : tone === "neg" ? "text-red-300" : ""
-        }`}
-      >
-        {value}
-      </p>
     </div>
   );
 }

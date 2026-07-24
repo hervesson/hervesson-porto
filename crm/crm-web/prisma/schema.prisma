@@ -45,6 +45,8 @@ model Lead {
   notifications Notification[]
   transactions Transaction[]
   events    Event[]
+  proposals Proposal[]
+  tasks     Task[]
 
   @@index([stage])
 }
@@ -108,6 +110,31 @@ model Event {
   @@index([startAt])
 }
 
+model Proposal {
+  id          String    @id @default(cuid())
+  number      String    @unique // "ORC-2026-001" — sequencial por ano
+  leadId      String?
+  lead        Lead?     @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  clientName  String // nome do cliente no momento da proposta — não muda se o lead for editado depois
+  status      String    @default("rascunho") // rascunho | enviado | aprovado | recusado | faturado
+  validUntil  DateTime?
+  notes       String?
+  items       ProposalItem[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([status])
+}
+
+model ProposalItem {
+  id          String   @id @default(cuid())
+  proposalId  String
+  proposal    Proposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  description String
+  value       Int // em R$
+  order       Int      @default(0)
+}
+
 model Transaction {
   id          String   @id @default(cuid())
   type        String // receita | despesa
@@ -123,4 +150,17 @@ model Transaction {
 
   @@index([date])
   @@index([type])
+}
+
+model Task {
+  id        String    @id @default(cuid())
+  title     String
+  done      Boolean   @default(false)
+  dueAt     DateTime?
+  leadId    String?
+  lead      Lead?     @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([done])
 }

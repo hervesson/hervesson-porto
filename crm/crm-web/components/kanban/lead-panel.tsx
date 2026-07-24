@@ -2,7 +2,8 @@
 
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
-import { X, Trash2, MessageCircle, Mail, Pencil } from "lucide-react";
+import { X, Trash2, MessageCircle, Mail, Pencil, FileText } from "lucide-react";
+import ProposalModal from "@/components/orcamentos/proposal-modal";
 import { STAGES } from "@/lib/stages";
 import { formatPhone, maskPhoneBR } from "@/lib/phone";
 import { ORIGINS, originLabel } from "@/lib/lead-origin";
@@ -49,6 +50,7 @@ export default function LeadPanel({
   const [lead, setLead] = useState<LeadFull | null>(null);
   const [saving, setSaving] = useState(false);
   const [editing, setEditing] = useState(false);
+  const [proposalModalOpen, setProposalModalOpen] = useState(false);
   const [form, setForm] = useState({
     name: "",
     company: "",
@@ -398,7 +400,7 @@ export default function LeadPanel({
                 </div>
               )}
 
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-3 gap-2">
                 <Link
                   href={`/whatsapp?lead=${lead.id}`}
                   className="flex flex-col items-center gap-1.5 bg-surface-2 border border-line rounded-lg py-3 text-xs hover:border-brand/50 transition"
@@ -413,6 +415,13 @@ export default function LeadPanel({
                 >
                   <Mail size={17} /> E-mail
                 </a>
+                <button
+                  type="button"
+                  onClick={() => setProposalModalOpen(true)}
+                  className="flex flex-col items-center gap-1.5 bg-surface-2 border border-line rounded-lg py-3 text-xs hover:border-brand/50 transition"
+                >
+                  <FileText size={17} /> Proposta
+                </button>
               </div>
 
               <div>
@@ -517,6 +526,14 @@ export default function LeadPanel({
           </>
         )}
       </aside>
+
+      {proposalModalOpen && lead && (
+        <ProposalModal
+          initialLeadId={lead.id}
+          onClose={() => setProposalModalOpen(false)}
+          onSaved={() => {}}
+        />
+      )}
     </div>
   );
 }

@@ -21,7 +21,7 @@ export default function LoginPage() {
     });
     setLoading(false);
     if (res.ok) {
-      router.push("/kanban");
+      router.push("/dashboard");
       router.refresh();
     } else {
       const data = await res.json().catch(() => ({}));

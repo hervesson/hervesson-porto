@@ -10,8 +10,8 @@ import {
   useDraggable,
   type DragEndEvent,
 } from "@dnd-kit/core";
-import { Plus } from "lucide-react";
-import { STAGES } from "@/lib/stages";
+import { Plus, Clock } from "lucide-react";
+import { STAGES, CLOSED_STAGES, STALE_DAYS, daysSince } from "@/lib/stages";
 import { formatPhone } from "@/lib/phone";
 import { originLabel } from "@/lib/lead-origin";
 import { formatBRL } from "@/lib/money";
@@ -30,6 +30,7 @@ export type LeadCard = {
   stage: string;
   aiPaused: boolean;
   summary: string | null;
+  createdAt: string;
   updatedAt: string;
   messages: { body: string; direction: string; createdAt: string }[];
   _count: { messages: number };
@@ -42,6 +43,8 @@ function Card({ lead, onOpen }: { lead: LeadCard; onOpen: (id: string) => void }
     ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)` }
     : undefined;
   const last = lead.messages[0];
+  const daysSinceContact = daysSince(last?.createdAt ?? lead.createdAt);
+  const isStale = !CLOSED_STAGES.includes(lead.stage) && daysSinceContact >= STALE_DAYS;
 
   return (
     <div
@@ -59,15 +62,25 @@ function Card({ lead, onOpen }: { lead: LeadCard; onOpen: (id: string) => void }
             {lead.company ? lead.company : formatPhone(lead.phone)}
           </p>
         </div>
-        {lead.aiPaused ? (
-          <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-300 shrink-0">
-            Você
-          </span>
-        ) : (
-          <span className="text-[10px] px-1.5 py-0.5 rounded bg-brand/15 text-brand shrink-0">
-            IA
-          </span>
-        )}
+        <div className="flex flex-col items-end gap-1 shrink-0">
+          {lead.aiPaused ? (
+            <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-300">
+              Você
+            </span>
+          ) : (
+            <span className="text-[10px] px-1.5 py-0.5 rounded bg-brand/15 text-brand">
+              IA
+            </span>
+          )}
+          {isStale && (
+            <span
+              title={`Sem contato há ${daysSinceContact} dias`}
+              className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-red-500/15 text-red-300"
+            >
+              <Clock size={10} /> {daysSinceContact}d
+            </span>
+          )}
+        </div>
       </div>
 
       {lead.tags.length > 0 && (
@@ -98,6 +111,43 @@ function Card({ lead, onOpen }: { lead: LeadCard; onOpen: (id: string) => void }
           {lead.value ? `${formatBRL(lead.value)} · ` : ""}
           {lead._count.messages} msg · {originLabel(lead.source)}
         </span>
+      </div>
+    </div>
+  );
+}
+
+function SourceBreakdown({ leads }: { leads: LeadCard[] }) {
+  const counts = new Map<string, number>();
+  for (const l of leads) counts.set(l.source, (counts.get(l.source) ?? 0) + 1);
+  const rows = Array.from(counts.entries())
+    .map(([source, count]) => ({ source, count }))
+    .sort((a, b) => b.count - a.count);
+  const max = Math.max(1, ...rows.map((r) => r.count));
+
+  if (rows.length === 0) return null;
+
+  return (
+    <div className="mx-4 sm:mx-6 mb-3 bg-surface-2/40 border border-line/50 rounded-xl px-4 py-3 shrink-0">
+      <p className="text-[11px] font-medium text-muted uppercase tracking-wide mb-2.5">
+        Origem dos leads · {leads.length} no total
+      </p>
+      <div className="flex flex-col gap-1.5">
+        {rows.map((r) => (
+          <div
+            key={r.source}
+            className="flex items-center gap-3"
+            title={`${r.count} lead${r.count === 1 ? "" : "s"}`}
+          >
+            <span className="w-20 shrink-0 text-xs text-muted truncate">{originLabel(r.source)}</span>
+            <div className="flex-1 h-2 rounded-full bg-surface overflow-hidden">
+              <div
+                className="h-full bg-brand rounded-full"
+                style={{ width: `${(r.count / max) * 100}%` }}
+              />
+            </div>
+            <span className="w-6 shrink-0 text-xs text-right font-medium">{r.count}</span>
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -195,6 +245,8 @@ export default function Board() {
       {!loaded ? (
         <div className="p-6 text-muted">Carregando leads…</div>
       ) : (
+        <>
+        <SourceBreakdown leads={leads} />
         <DndContext sensors={sensors} onDragEnd={onDragEnd}>
           <div className="flex-1 min-h-0 overflow-x-auto">
             <div className="flex gap-3 p-4 h-full min-h-0">
@@ -211,6 +263,7 @@ export default function Board() {
             </div>
           </div>
         </DndContext>
+        </>
       )}
 
       {modalOpen && (

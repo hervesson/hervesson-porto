@@ -3,5 +3,5 @@ import { requireUser } from "@/lib/session";
 
 export default async function Home() {
   const session = await requireUser();
-  redirect(session ? "/kanban" : "/login");
+  redirect(session ? "/dashboard" : "/login");
 }
