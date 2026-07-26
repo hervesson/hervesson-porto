@@ -67,8 +67,9 @@ export async function POST(req: Request) {
       );
     }
 
+    let sendResult;
     try {
-      await sendMedia(lead.phone, {
+      sendResult = await sendMedia(lead.phone, {
         mediatype,
         mimetype: mimeType,
         media: base64,
@@ -90,6 +91,10 @@ export async function POST(req: Request) {
         mediaUrl,
         mediaType: mediatype,
         fileName: safeName,
+        // guarda o id que a Evolution devolveu — o webhook usa pra saber
+        // que essa mensagem já foi registrada aqui (evita duplicar quando
+        // o eco dela chegar de volta pelo messages.upsert)
+        waMessageId: sendResult?.key?.id ?? undefined,
       },
     });
 
@@ -102,8 +107,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "leadId e body são obrigatórios" }, { status: 400 });
   }
 
+  let sendResult;
   try {
-    await sendText(lead.phone, text);
+    sendResult = await sendText(lead.phone, text);
   } catch (err) {
     return NextResponse.json(
       { error: "falha ao enviar pelo WhatsApp", detail: String(err) },
@@ -112,7 +118,13 @@ export async function POST(req: Request) {
   }
 
   const message = await prisma.message.create({
-    data: { leadId: lead.id, direction: "out", author: "hervesson", body: text },
+    data: {
+      leadId: lead.id,
+      direction: "out",
+      author: "hervesson",
+      body: text,
+      waMessageId: sendResult?.key?.id ?? undefined,
+    },
   });
 
   return NextResponse.json({ ok: true, message });

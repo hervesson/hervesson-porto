@@ -67,8 +67,13 @@ export async function POST(req: Request) {
     try {
       const key = data?.key ?? {};
       const remoteJid: string = key.remoteJid ?? "";
-      // ignora mensagens enviadas por nós e mensagens de grupo
-      if (key.fromMe) continue;
+      // fromMe = mensagem enviada da nossa própria conta (painel, IA, ou
+      // direto do celular do Hervesson) — não dá pra distinguir a origem só
+      // pelo payload, então usa o dedupe por waMessageId abaixo: painel e IA
+      // já gravam a mensagem (com o id da Evolution) na hora de enviar, daí
+      // o eco que chega aqui é reconhecido e ignorado; o que sobrar é
+      // mensagem mandada direto do celular, fora do painel.
+      const fromMe: boolean = Boolean(key.fromMe);
       if (!remoteJid || remoteJid.endsWith("@g.us")) continue;
 
       const body = extractText(data?.message).trim();
@@ -78,19 +83,24 @@ export async function POST(req: Request) {
       const waMessageId: string | undefined = key.id ?? undefined;
       const pushName: string | null = data?.pushName ?? null;
 
-      // dedupe: se já registramos essa mensagem, pula
+      // dedupe: se já registramos essa mensagem (nós mesmos enviamos, ou já
+      // processamos esse evento antes), pula
       if (waMessageId) {
         const dup = await prisma.message.findUnique({ where: { waMessageId } });
         if (dup) continue;
       }
 
-      // acha ou cria o lead pelo telefone
+      // acha ou cria o lead pelo telefone — pushName só é confiável quando
+      // não é fromMe (numa mensagem nossa, pushName é o nome do Hervesson,
+      // não do contato)
       const existingLead = await prisma.lead.findUnique({ where: { phone } });
       const lead =
         existingLead ??
-        (await prisma.lead.create({ data: { phone, name: pushName, source: "whatsapp" } }));
+        (await prisma.lead.create({
+          data: { phone, name: fromMe ? null : pushName, source: "whatsapp" },
+        }));
 
-      if (!existingLead) {
+      if (!existingLead && !fromMe) {
         await createLeadNotification(lead);
       }
 
@@ -110,13 +120,24 @@ export async function POST(req: Request) {
       await prisma.message.create({
         data: {
           leadId: lead.id,
-          direction: "in",
-          author: "lead",
+          direction: fromMe ? "out" : "in",
+          author: fromMe ? "hervesson" : "lead",
           body,
           waMessageId,
           raw: data ?? undefined,
         },
       });
+
+      if (fromMe) {
+        // chegou até aqui sem ser deduplicada, então foi mandada direto do
+        // celular (painel e IA já tinham gravado a própria mensagem antes) —
+        // Hervesson assumiu a conversa por fora do CRM, pausa a IA pra ela
+        // não responder por cima dele.
+        if (!lead.aiPaused) {
+          await prisma.lead.update({ where: { id: lead.id }, data: { aiPaused: true } });
+        }
+        continue;
+      }
 
       // agenda a IA com debounce — se chegar outra mensagem desse lead nos
       // próximos segundos, agrupa num único turno em vez de responder cada

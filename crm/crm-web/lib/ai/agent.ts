@@ -119,8 +119,9 @@ export async function runAgent(lead: Lead): Promise<void> {
   if (!reply) return;
 
   // Envia pelo WhatsApp
+  let sendResult;
   try {
-    await sendText(lead.phone, reply);
+    sendResult = await sendText(lead.phone, reply);
   } catch (err) {
     console.error(`[agent] falha ao enviar WhatsApp p/ lead ${lead.id}:`, err);
     return;
@@ -128,7 +129,16 @@ export async function runAgent(lead: Lead): Promise<void> {
 
   // Persiste a resposta + atualiza a ficha do lead
   await prisma.message.create({
-    data: { leadId: lead.id, direction: "out", author: "ia", body: reply },
+    data: {
+      leadId: lead.id,
+      direction: "out",
+      author: "ia",
+      body: reply,
+      // guarda o id da Evolution — o webhook usa pra reconhecer o eco dessa
+      // mensagem (fromMe) como já registrada, em vez de achar que foi o
+      // Hervesson respondendo pelo celular e pausar a IA à toa
+      waMessageId: sendResult?.key?.id ?? undefined,
+    },
   });
 
   const nextStage: Stage = input.needs_human ? "QUALIFICADO" : input.suggested_stage;
