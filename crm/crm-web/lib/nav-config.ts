@@ -5,6 +5,7 @@ import {
   Kanban,
   LayoutDashboard,
   MessageCircle,
+  Sparkles,
   Users,
   Wallet,
   type LucideIcon,
@@ -29,6 +30,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
       { label: "Agenda", href: "/agenda", icon: Calendar },
       { label: "Tarefas", href: "/tarefas", icon: CheckSquare },
+      { label: "Sonhos", href: "/sonhos", icon: Sparkles },
     ],
   },
   {

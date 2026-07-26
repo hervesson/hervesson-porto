@@ -167,3 +167,13 @@ model Task {
   @@index([done])
   @@index([priority])
 }
+
+model Dream {
+  id        String   @id @default(cuid())
+  title     String
+  note      String? // por que esse sonho importa — escrito pelo próprio usuário
+  imageUrl  String // /uploads/dreams/<arquivo>
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

@@ -8,9 +8,9 @@ import StatCard from "@/components/ui/stat-card";
 import TaskForm from "./task-form";
 
 const TABS = [
-  { key: "pendentes", label: "Pendentes" },
-  { key: "concluidas", label: "Concluídas" },
   { key: "todas", label: "Todas" },
+  { key: "concluidas", label: "Concluídas" },
+  { key: "pendentes", label: "Pendentes" },
 ] as const;
 type Tab = (typeof TABS)[number]["key"];
 

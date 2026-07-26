@@ -10,6 +10,7 @@ import { computeStats as computeProposalStats } from "@/lib/proposals";
 import type { MergedEvent } from "@/lib/agenda";
 import StatCard from "@/components/ui/stat-card";
 import TasksPanel from "./tasks-panel";
+import DreamsPanel from "./dreams-panel";
 
 type Lead = {
   id: string;
@@ -155,6 +156,8 @@ export default function DashboardView() {
         <h1 className="text-lg font-semibold">{greeting()}, Hervesson 👋</h1>
         <p className="text-sm text-muted mt-0.5">{dateLabel}</p>
       </div>
+
+      <DreamsPanel />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <StatCard label="Receita (mês)" value={formatBRL(stats.receitaMes)} tone="pos" />
