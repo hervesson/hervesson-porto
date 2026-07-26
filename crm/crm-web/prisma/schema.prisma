@@ -153,14 +153,17 @@ model Transaction {
 }
 
 model Task {
-  id        String    @id @default(cuid())
-  title     String
-  done      Boolean   @default(false)
-  dueAt     DateTime?
-  leadId    String?
-  lead      Lead?     @relation(fields: [leadId], references: [id], onDelete: SetNull)
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  id          String    @id @default(cuid())
+  title       String
+  done        Boolean   @default(false)
+  priority    String    @default("normal") // urgente | normal | baixa
+  dueAt       DateTime?
+  completedAt DateTime? // setado só quando done vira true; limpo se desmarcar (não usar updatedAt — bug do Lead.updatedAt)
+  leadId      String?
+  lead        Lead?     @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   @@index([done])
+  @@index([priority])
 }

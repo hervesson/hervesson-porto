@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
-import { CheckSquare } from "lucide-react";
-import { sortTasks, type TaskItem } from "@/lib/tasks";
+import { useEffect, useState, useCallback, useMemo } from "react";
+import Link from "next/link";
+import { ArrowRight, CheckSquare, Clock } from "lucide-react";
+import { sortTasks, priorityInfo, type TaskItem } from "@/lib/tasks";
 
 export default function TasksPanel() {
   const [tasks, setTasks] = useState<TaskItem[]>([]);
@@ -53,14 +54,24 @@ export default function TasksPanel() {
     await fetch(`/api/tasks/${id}`, { method: "DELETE" });
   }
 
-  const sorted = sortTasks(tasks);
   const today = new Date().toISOString().slice(0, 10);
+  const todayTasks = useMemo(
+    () => sortTasks(tasks.filter((t) => t.dueAt && t.dueAt.slice(0, 10) === today)),
+    [tasks, today],
+  );
+  const overdueCount = useMemo(
+    () => tasks.filter((t) => !t.done && t.dueAt && t.dueAt.slice(0, 10) < today).length,
+    [tasks, today],
+  );
 
   return (
     <div className="bg-surface-2 border border-line rounded-xl p-4">
-      <p className="text-xs font-medium text-muted uppercase tracking-wide mb-3">
-        Minhas tarefas
-      </p>
+      <div className="flex items-center justify-between mb-3">
+        <p className="text-xs font-medium text-muted uppercase tracking-wide">Tarefas de hoje</p>
+        <Link href="/tarefas" className="text-xs text-brand hover:underline flex items-center gap-1 shrink-0">
+          Ver todas <ArrowRight size={12} />
+        </Link>
+      </div>
 
       <form onSubmit={addTask} className="flex items-center gap-2 mb-3">
         <input
@@ -83,17 +94,27 @@ export default function TasksPanel() {
         </button>
       </form>
 
+      {overdueCount > 0 && (
+        <Link
+          href="/tarefas"
+          className="flex items-center gap-1.5 text-xs text-red-300 hover:underline mb-3"
+        >
+          <Clock size={12} />
+          {overdueCount} atrasada{overdueCount === 1 ? "" : "s"} — ver tudo
+        </Link>
+      )}
+
       {!loaded ? (
         <p className="text-sm text-muted">Carregando…</p>
-      ) : sorted.length === 0 ? (
+      ) : todayTasks.length === 0 ? (
         <div className="text-center py-4 flex flex-col items-center gap-1.5">
           <CheckSquare size={22} className="text-muted" />
-          <p className="text-xs text-muted">Nenhuma tarefa. Adicione uma acima.</p>
+          <p className="text-xs text-muted">Nada com prazo pra hoje.</p>
         </div>
       ) : (
         <div className="flex flex-col gap-1.5 max-h-72 overflow-y-auto">
-          {sorted.map((t) => {
-            const overdue = !t.done && !!t.dueAt && t.dueAt.slice(0, 10) < today;
+          {todayTasks.map((t) => {
+            const p = priorityInfo(t.priority);
             return (
               <div key={t.id} className="flex items-center gap-2.5 group">
                 <button
@@ -106,21 +127,17 @@ export default function TasksPanel() {
                   {t.done && <span className="text-brand-ink text-[10px] leading-none">✓</span>}
                 </button>
                 <span
+                  className="shrink-0 w-2 h-2 rounded-full"
+                  style={{ background: p.accent }}
+                  title={p.label}
+                />
+                <span
                   className={`flex-1 min-w-0 truncate text-sm ${
                     t.done ? "line-through text-muted" : ""
                   }`}
                 >
                   {t.title}
                 </span>
-                {t.dueAt && (
-                  <span
-                    className={`shrink-0 text-[10px] px-1.5 py-0.5 rounded ${
-                      overdue ? "bg-red-500/15 text-red-300" : "bg-surface border border-line text-muted"
-                    }`}
-                  >
-                    {new Date(t.dueAt).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })}
-                  </span>
-                )}
                 <button
                   onClick={() => remove(t.id)}
                   className="shrink-0 text-muted hover:text-red-400 transition text-xs opacity-0 group-hover:opacity-100"

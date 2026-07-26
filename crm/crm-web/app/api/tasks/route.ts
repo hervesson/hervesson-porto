@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/session";
+import { PRIORITY_VALUES } from "@/lib/tasks";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -28,9 +29,10 @@ export async function POST(req: Request) {
 
   const dueAt = typeof body.dueAt === "string" && body.dueAt ? new Date(body.dueAt) : null;
   const leadId = typeof body.leadId === "string" && body.leadId ? body.leadId : null;
+  const priority = typeof body.priority === "string" && PRIORITY_VALUES.includes(body.priority) ? body.priority : "normal";
 
   const task = await prisma.task.create({
-    data: { title, dueAt, leadId },
+    data: { title, dueAt, leadId, priority },
     include: { lead: { select: { id: true, name: true } } },
   });
   return NextResponse.json({ ok: true, task });

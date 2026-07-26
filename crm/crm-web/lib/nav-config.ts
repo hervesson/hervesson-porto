@@ -1,5 +1,6 @@
 import {
   Calendar,
+  CheckSquare,
   FileText,
   Kanban,
   LayoutDashboard,
@@ -27,6 +28,7 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
       { label: "Agenda", href: "/agenda", icon: Calendar },
+      { label: "Tarefas", href: "/tarefas", icon: CheckSquare },
     ],
   },
   {
