@@ -8,6 +8,11 @@ import { STAGE_LABEL } from "@/lib/stages";
 import { originLabel } from "@/lib/lead-origin";
 import { formatTime } from "@/lib/relative-time";
 
+// mesmos placeholders que o webhook grava quando a mídia recebida não tem
+// legenda (app/api/whatsapp/webhook/route.ts) — evita repetir o texto
+// embaixo do player/preview que já mostra a mídia
+const MEDIA_PLACEHOLDER_BODIES = new Set(["[áudio]", "[imagem]", "[vídeo]", "[documento]"]);
+
 type Msg = {
   id: string;
   direction: string;
@@ -262,7 +267,10 @@ export default function LeadDetail({ leadId }: { leadId: string }) {
                       />
                     </a>
                   )}
-                  {m.mediaUrl && m.mediaType !== "image" && (
+                  {m.mediaUrl && m.mediaType === "audio" && (
+                    <audio controls src={m.mediaUrl} className="max-w-full mb-1" style={{ height: 36 }} />
+                  )}
+                  {m.mediaUrl && m.mediaType !== "image" && m.mediaType !== "audio" && (
                     <a
                       href={m.mediaUrl}
                       target="_blank"
@@ -273,7 +281,7 @@ export default function LeadDetail({ leadId }: { leadId: string }) {
                       <span className="text-xs truncate">{m.fileName ?? "arquivo"}</span>
                     </a>
                   )}
-                  {m.body && (
+                  {m.body && !(m.mediaType && MEDIA_PLACEHOLDER_BODIES.has(m.body)) && (
                     <p className="text-sm whitespace-pre-wrap wrap-break-word">{m.body}</p>
                   )}
 

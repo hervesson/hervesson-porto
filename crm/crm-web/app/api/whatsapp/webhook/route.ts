@@ -1,9 +1,11 @@
 import { NextResponse } from "next/server";
+import { mkdir, writeFile } from "fs/promises";
+import path from "path";
 import { prisma } from "@/lib/db";
 import { jidToPhone } from "@/lib/phone";
 import { scheduleAgentRun } from "@/lib/ai/agent-scheduler";
 import { createLeadNotification } from "@/lib/notifications";
-import { fetchProfilePicture } from "@/lib/evolution";
+import { fetchProfilePicture, getBase64FromMediaMessage } from "@/lib/evolution";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -21,6 +23,44 @@ function extractText(message: Record<string, unknown> | undefined): string {
     m.listResponseMessage?.title ??
     ""
   );
+}
+
+type MediaKind = "audio" | "image" | "video" | "document";
+
+// Detecta se a mensagem tem mídia anexada (a Evolution manda só metadados no
+// payload — o conteúdo real vem de getBase64FromMediaMessage).
+function detectMediaKind(message: Record<string, unknown> | undefined): MediaKind | null {
+  if (!message) return null;
+  const m = message as Record<string, any>;
+  if (m.audioMessage) return "audio";
+  if (m.imageMessage) return "image";
+  if (m.videoMessage) return "video";
+  if (m.documentMessage) return "document";
+  return null;
+}
+
+const PLACEHOLDER_BODY: Record<MediaKind, string> = {
+  audio: "[áudio]",
+  image: "[imagem]",
+  video: "[vídeo]",
+  document: "[documento]",
+};
+
+const EXT_BY_MIME: Record<string, string> = {
+  "audio/ogg": "ogg",
+  "audio/mpeg": "mp3",
+  "audio/mp4": "m4a",
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/webp": "webp",
+  "video/mp4": "mp4",
+  "application/pdf": "pdf",
+};
+
+function extFromMime(mime: string | undefined): string {
+  if (!mime) return "bin";
+  const clean = mime.split(";")[0]?.trim() ?? mime;
+  return EXT_BY_MIME[clean] ?? clean.split("/")[1] ?? "bin";
 }
 
 // Mapeia o status de entrega da Evolution/Baileys pro nosso enum simples.
@@ -76,8 +116,10 @@ export async function POST(req: Request) {
       const fromMe: boolean = Boolean(key.fromMe);
       if (!remoteJid || remoteJid.endsWith("@g.us")) continue;
 
-      const body = extractText(data?.message).trim();
-      if (!body) continue;
+      const mediaKind = detectMediaKind(data?.message);
+      let body = extractText(data?.message).trim();
+      if (!body && mediaKind) body = PLACEHOLDER_BODY[mediaKind];
+      if (!body) continue; // nem texto reconhecido, nem mídia — ignora
 
       const phone = jidToPhone(remoteJid);
       const waMessageId: string | undefined = key.id ?? undefined;
@@ -117,12 +159,41 @@ export async function POST(req: Request) {
         }
       }
 
+      // baixa a mídia recebida (áudio, imagem, vídeo, documento) — best-effort,
+      // se falhar a mensagem ainda é salva com o texto/placeholder
+      let mediaUrl: string | undefined;
+      let mediaType: string | undefined;
+      let fileName: string | undefined;
+      if (mediaKind && waMessageId) {
+        try {
+          const media = await getBase64FromMediaMessage(waMessageId);
+          if (media?.base64) {
+            const safeName =
+              typeof media.fileName === "string" && media.fileName
+                ? media.fileName.replace(/[^\w.\-]/g, "_")
+                : `${mediaKind}.${extFromMime(media.mimetype)}`;
+            const dir = path.join(process.cwd(), "public", "uploads", lead.id);
+            const savedName = `${Date.now()}-${safeName}`;
+            await mkdir(dir, { recursive: true });
+            await writeFile(path.join(dir, savedName), Buffer.from(media.base64, "base64"));
+            mediaUrl = `/uploads/${lead.id}/${savedName}`;
+            mediaType = mediaKind;
+            fileName = safeName;
+          }
+        } catch (err) {
+          console.error("[webhook] erro baixando mídia recebida:", err);
+        }
+      }
+
       await prisma.message.create({
         data: {
           leadId: lead.id,
           direction: fromMe ? "out" : "in",
           author: fromMe ? "hervesson" : "lead",
           body,
+          mediaUrl,
+          mediaType,
+          fileName,
           waMessageId,
           raw: data ?? undefined,
         },

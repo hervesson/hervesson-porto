@@ -48,6 +48,17 @@ export async function sendMedia(
   });
 }
 
+// Baixa o conteúdo de uma mensagem de mídia recebida (áudio, imagem, vídeo,
+// documento) — o webhook só manda metadados dela, o conteúdo real (mídia do
+// WhatsApp é criptografada) precisa dessa chamada separada, pelo id da
+// mensagem. Retorna { mediaType, fileName, size, mimetype, base64 }.
+export async function getBase64FromMediaMessage(messageId: string) {
+  return ev(`/chat/getBase64FromMediaMessage/${INSTANCE}`, {
+    method: "POST",
+    body: JSON.stringify({ message: { key: { id: messageId } } }),
+  });
+}
+
 // Busca a foto de perfil do WhatsApp do número. Best-effort: retorna null se
 // não existir foto, o número não estiver no WhatsApp, ou a Evolution falhar.
 export async function fetchProfilePicture(phone: string): Promise<string | null> {
