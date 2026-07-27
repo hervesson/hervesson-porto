@@ -119,6 +119,7 @@ model Proposal {
   status      String    @default("rascunho") // rascunho | enviado | aprovado | recusado | faturado
   validUntil  DateTime?
   notes       String?
+  pdfUrl      String? // /uploads/proposals/<arquivo>.pdf — PDF gerado por fora e anexado aqui
   items       ProposalItem[]
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt

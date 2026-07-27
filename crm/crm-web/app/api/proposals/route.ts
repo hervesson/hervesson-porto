@@ -1,10 +1,27 @@
 import { NextResponse } from "next/server";
+import { mkdir, writeFile } from "fs/promises";
+import path from "path";
 import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/session";
 import { STATUS_VALUES, computeStats, formatProposalNumber } from "@/lib/proposals";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+const MAX_BASE64_LEN = 16 * 1024 * 1024; // ~16MB de base64 (~12MB de arquivo)
+
+// Salva o PDF anexado (base64) em public/uploads/proposals — mesmo padrão
+// já usado pros anexos do WhatsApp e pelas fotos de sonhos.
+async function savePdf(pdf: { name?: string; mimeType?: string; base64?: string }): Promise<string | null> {
+  if (!pdf?.base64) return null;
+  if (pdf.base64.length > MAX_BASE64_LEN) throw new Error("arquivo muito grande (máx. ~12MB)");
+  const safeName = (pdf.name || "proposta.pdf").replace(/[^\w.\-]/g, "_");
+  const fileName = `${Date.now()}-${safeName}`;
+  const dir = path.join(process.cwd(), "public", "uploads", "proposals");
+  await mkdir(dir, { recursive: true });
+  await writeFile(path.join(dir, fileName), Buffer.from(pdf.base64, "base64"));
+  return `/uploads/proposals/${fileName}`;
+}
 
 // GET = lista de propostas + indicadores.
 export async function GET() {
@@ -46,6 +63,15 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "adicione ao menos 1 item" }, { status: 400 });
   }
 
+  let pdfUrl: string | null = null;
+  if (body.pdf) {
+    try {
+      pdfUrl = await savePdf(body.pdf);
+    } catch (err) {
+      return NextResponse.json({ error: String((err as Error).message ?? err) }, { status: 413 });
+    }
+  }
+
   const year = new Date().getFullYear();
   const countThisYear = await prisma.proposal.count({
     where: { createdAt: { gte: new Date(`${year}-01-01`), lt: new Date(`${year + 1}-01-01`) } },
@@ -60,6 +86,7 @@ export async function POST(req: Request) {
       status,
       validUntil,
       notes,
+      pdfUrl,
       items: {
         create: items.map((i, idx) => ({ description: i.description, value: Math.round(i.value), order: idx })),
       },

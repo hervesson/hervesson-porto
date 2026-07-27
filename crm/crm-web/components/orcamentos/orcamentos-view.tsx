@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { Plus, FileText } from "lucide-react";
+import { Plus, FileText, MessageCircle } from "lucide-react";
 import { STATUSES, statusInfo, proposalTotal } from "@/lib/proposals";
 import { formatBRL } from "@/lib/money";
 import StatCard from "@/components/ui/stat-card";
@@ -21,6 +21,7 @@ export default function OrcamentosView() {
   const [loaded, setLoaded] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Proposal | undefined>(undefined);
+  const [sendingId, setSendingId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     const res = await fetch("/api/proposals", { cache: "no-store" });
@@ -54,6 +55,18 @@ export default function OrcamentosView() {
     load();
   }
 
+  async function sendWhatsapp(p: Proposal) {
+    setSendingId(p.id);
+    const res = await fetch(`/api/proposals/${p.id}/send`, { method: "POST" });
+    setSendingId(null);
+    if (res.ok) {
+      load();
+    } else {
+      const data = await res.json().catch(() => ({}));
+      alert(data.error ?? "Falha ao enviar pelo WhatsApp.");
+    }
+  }
+
   function openNew() {
     setEditing(undefined);
     setModalOpen(true);
@@ -68,7 +81,9 @@ export default function OrcamentosView() {
       <div className="flex items-start justify-between gap-3">
         <div>
           <h1 className="text-lg font-semibold">Orçamentos</h1>
-          <p className="text-sm text-muted mt-0.5">Propostas com itens — sem catálogo, sem geração de PDF por enquanto.</p>
+          <p className="text-sm text-muted mt-0.5">
+            Propostas com itens — anexe o PDF e envie direto pro lead no WhatsApp.
+          </p>
         </div>
         <button
           onClick={openNew}
@@ -110,7 +125,7 @@ export default function OrcamentosView() {
                   <th className="px-4 py-3 font-medium">Validade</th>
                   <th className="px-4 py-3 font-medium">Status</th>
                   <th className="px-4 py-3 font-medium text-right">Total</th>
-                  <th className="px-4 py-3 font-medium w-16" />
+                  <th className="px-4 py-3 font-medium w-20" />
                 </tr>
               </thead>
               <tbody>
@@ -145,13 +160,25 @@ export default function OrcamentosView() {
                       </td>
                       <td className="px-4 py-3 text-right font-medium">{formatBRL(proposalTotal(p.items))}</td>
                       <td className="px-4 py-3">
-                        <button
-                          onClick={() => remove(p.id)}
-                          className="text-muted hover:text-red-400 transition text-xs"
-                          title="Excluir"
-                        >
-                          ✕
-                        </button>
+                        <div className="flex items-center gap-2 justify-end">
+                          {p.pdfUrl && p.leadId && (
+                            <button
+                              onClick={() => sendWhatsapp(p)}
+                              disabled={sendingId === p.id}
+                              className="text-muted hover:text-brand transition disabled:opacity-40"
+                              title="Enviar PDF pro lead no WhatsApp"
+                            >
+                              <MessageCircle size={15} />
+                            </button>
+                          )}
+                          <button
+                            onClick={() => remove(p.id)}
+                            className="text-muted hover:text-red-400 transition text-xs"
+                            title="Excluir"
+                          >
+                            ✕
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );

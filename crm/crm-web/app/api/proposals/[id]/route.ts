@@ -1,10 +1,25 @@
 import { NextResponse } from "next/server";
+import { mkdir, writeFile } from "fs/promises";
+import path from "path";
 import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/session";
 import { STATUS_VALUES, proposalTotal } from "@/lib/proposals";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+const MAX_BASE64_LEN = 16 * 1024 * 1024;
+
+async function savePdf(pdf: { name?: string; mimeType?: string; base64?: string }): Promise<string | null> {
+  if (!pdf?.base64) return null;
+  if (pdf.base64.length > MAX_BASE64_LEN) throw new Error("arquivo muito grande (máx. ~12MB)");
+  const safeName = (pdf.name || "proposta.pdf").replace(/[^\w.\-]/g, "_");
+  const fileName = `${Date.now()}-${safeName}`;
+  const dir = path.join(process.cwd(), "public", "uploads", "proposals");
+  await mkdir(dir, { recursive: true });
+  await writeFile(path.join(dir, fileName), Buffer.from(pdf.base64, "base64"));
+  return `/uploads/proposals/${fileName}`;
+}
 
 // PATCH = edita campos e/ou substitui a lista de itens. Se o status virar
 // "faturado" (e ainda não era), cria o lançamento correspondente no Financeiro.
@@ -26,6 +41,14 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   if (typeof body.notes === "string") data.notes = body.notes.trim() || null;
   if (body.leadId === null) data.leadId = null;
   else if (typeof body.leadId === "string" && body.leadId) data.leadId = body.leadId;
+
+  if (body.pdf) {
+    try {
+      data.pdfUrl = await savePdf(body.pdf);
+    } catch (err) {
+      return NextResponse.json({ error: String((err as Error).message ?? err) }, { status: 413 });
+    }
+  }
 
   const items: { description: string; value: number }[] | null = Array.isArray(body.items)
     ? body.items

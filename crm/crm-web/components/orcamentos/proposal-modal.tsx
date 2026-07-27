@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { X, Plus, Trash2 } from "lucide-react";
+import { X, Plus, Trash2, FileText } from "lucide-react";
 import { STATUSES } from "@/lib/proposals";
 import { formatBRL } from "@/lib/money";
 
@@ -12,6 +12,15 @@ const labelClass = "text-xs text-muted";
 type LeadOption = { id: string; name: string | null; phone: string | null; email: string | null };
 type Item = { description: string; value: string };
 
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result ?? "").split(",")[1] ?? "");
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
 export type ProposalFull = {
   id: string;
   number: string;
@@ -20,6 +29,7 @@ export type ProposalFull = {
   status: string;
   validUntil: string | null;
   notes: string | null;
+  pdfUrl: string | null;
   items: { description: string; value: number }[];
 };
 
@@ -46,6 +56,7 @@ export default function ProposalModal({
     ],
   );
   const [leads, setLeads] = useState<LeadOption[]>([]);
+  const [pdfFile, setPdfFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
@@ -89,7 +100,7 @@ export default function ProposalModal({
     setError("");
     setSubmitting(true);
 
-    const payload = {
+    const payload: Record<string, unknown> = {
       clientName: clientName.trim(),
       leadId: leadId || null,
       status,
@@ -97,6 +108,9 @@ export default function ProposalModal({
       notes: notes.trim(),
       items: validItems.map((i) => ({ description: i.description.trim(), value: Number(i.value) })),
     };
+    if (pdfFile) {
+      payload.pdf = { name: pdfFile.name, mimeType: pdfFile.type, base64: await fileToBase64(pdfFile) };
+    }
 
     const res = await fetch(isEdit ? `/api/proposals/${proposal!.id}` : "/api/proposals", {
       method: isEdit ? "PATCH" : "POST",
@@ -126,7 +140,9 @@ export default function ProposalModal({
             <h2 className="font-semibold text-lg">
               {isEdit ? `Editar ${proposal!.number}` : "Novo orçamento"}
             </h2>
-            <p className="text-sm text-muted mt-0.5">Proposta com itens — sem geração de PDF por enquanto.</p>
+            <p className="text-sm text-muted mt-0.5">
+              Anexe o PDF pra poder enviar pro lead direto no WhatsApp.
+            </p>
           </div>
           <button type="button" onClick={onClose} className="text-muted hover:text-cream transition" aria-label="Fechar">
             <X size={18} />
@@ -206,6 +222,29 @@ export default function ProposalModal({
             <span className="font-semibold">{formatBRL(total)}</span>
           </div>
         </div>
+
+        <label className="flex flex-col gap-1">
+          <span className={labelClass}>PDF da proposta (opcional)</span>
+          {(pdfFile || proposal?.pdfUrl) && (
+            <div className="flex items-center gap-2 bg-surface-2 border border-line rounded-lg px-3 py-2 text-sm">
+              <FileText size={15} className="text-muted shrink-0" />
+              <span className="truncate flex-1">
+                {pdfFile ? pdfFile.name : proposal!.pdfUrl!.split("/").pop()}
+              </span>
+              {!pdfFile && proposal?.pdfUrl && (
+                <a href={proposal.pdfUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-brand hover:underline shrink-0">
+                  ver
+                </a>
+              )}
+            </div>
+          )}
+          <input
+            type="file"
+            accept="application/pdf"
+            onChange={(e) => setPdfFile(e.target.files?.[0] ?? null)}
+            className="text-xs text-muted"
+          />
+        </label>
 
         <label className="flex flex-col gap-1">
           <span className={labelClass}>Observações (opcional)</span>
