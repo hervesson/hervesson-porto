@@ -2,10 +2,19 @@ import type { Metadata } from "next"
 import Link from "next/link"
 import { getPublishedPosts } from "@/lib/posts"
 
+const BLOG_DESCRIPTION =
+  "TI, IA e estratégia aplicadas a negócios — sem hype, com resultado prático."
+
 export const metadata: Metadata = {
   title: "Blog",
-  description:
-    "TI, IA e estratégia aplicadas a negócios — sem hype, com resultado prático.",
+  description: BLOG_DESCRIPTION,
+  alternates: { canonical: "/blog" },
+  openGraph: {
+    title: "Blog",
+    description: BLOG_DESCRIPTION,
+    url: "/blog",
+    type: "website",
+  },
 }
 
 function formatDate(date: string) {

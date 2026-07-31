@@ -3,6 +3,9 @@ import Link from "next/link"
 import { notFound } from "next/navigation"
 import { ArrowLeft } from "lucide-react"
 import { getPost, getPublishedPosts } from "@/lib/posts"
+import { JsonLd } from "@/components/json-ld"
+import { site } from "@/lib/site"
+import { graph, articleSchema, breadcrumbSchema } from "@/lib/schema"
 
 export function generateStaticParams() {
   return getPublishedPosts().map((post) => ({ slug: post.slug }))
@@ -16,7 +19,29 @@ export async function generateMetadata({
   const { slug } = await params
   const post = await getPost(slug)
   if (!post) return {}
-  return { title: post.title, description: post.description }
+
+  // Rascunho nunca deve ser indexado, mesmo se a URL vazar.
+  if (post.draft) return { title: post.title, robots: { index: false, follow: false } }
+
+  const url = `/blog/${slug}`
+  return {
+    title: post.title,
+    description: post.description,
+    alternates: { canonical: url },
+    openGraph: {
+      title: post.title,
+      description: post.description,
+      url,
+      type: "article",
+      publishedTime: post.date || undefined,
+      authors: [site.name],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: post.title,
+      description: post.description,
+    },
+  }
 }
 
 function formatDate(date: string) {
@@ -36,6 +61,16 @@ export default async function BlogPostPage({
 
   return (
     <article className="max-w-3xl mx-auto px-4 md:px-8 py-16">
+      <JsonLd
+        data={graph(
+          articleSchema(post),
+          breadcrumbSchema([
+            { name: "Início", path: "/" },
+            { name: "Blog", path: "/blog" },
+            { name: post.title, path: `/blog/${post.slug}` },
+          ]),
+        )}
+      />
       <Link
         href="/blog"
         className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-foreground transition-colors mb-8"
