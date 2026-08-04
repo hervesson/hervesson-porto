@@ -74,4 +74,4 @@ Geométrico e direto — ícone hexagonal com setas, sem floreios. Combina com o
 
 ## Observações adicionais
 
-Material visual (cores, fontes, logo) vem da Trinc Technologies LTDA, empresa em standby — reaproveitado aqui como base visual da marca pessoal de Hervesson Porto. Há variações extras salvas em `identidade/` (`avatar2(1).png`, `avatar3(1).png`, `icon3.png`) disponíveis se precisar de outra composição.
+Material visual (cores, fontes, logo) vem da Trinc Tecnologies LTDA, empresa em standby — reaproveitado aqui como base visual da marca pessoal de Hervesson Porto. Há variações extras salvas em `identidade/` (`avatar2(1).png`, `avatar3(1).png`, `icon3.png`) disponíveis se precisar de outra composição.

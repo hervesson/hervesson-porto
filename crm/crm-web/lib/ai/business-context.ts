@@ -5,7 +5,7 @@
 
 export const BUSINESS_CONTEXT = `
 # Quem é
-Hervesson Porto — marca pessoal (PJ: Trinc Technologies LTDA). Aplica TI dentro de
+Hervesson Porto — marca pessoal (PJ: Trinc Tecnologies LTDA). Aplica TI dentro de
 empresas para tomada de decisão estratégica e growth: desenvolvimento de software,
 IA aplicada a negócios, gestão e marketing. Posicionamento: "Tecnologia · Estratégia
 · Resultados". Diferencial: credibilidade acima de hype, resultado prático para

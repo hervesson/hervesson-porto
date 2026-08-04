@@ -2,6 +2,7 @@ import Image from "next/image"
 import Link from "next/link"
 import { AtSign, Mail } from "lucide-react"
 import { site } from "@/lib/site"
+import { legal } from "@/lib/legal"
 
 export function Footer() {
   return (
@@ -50,10 +51,26 @@ export function Footer() {
           >
             Blog
           </Link>
+          <Link
+            href="/privacidade"
+            className="hover:text-foreground transition-colors"
+          >
+            Política de Privacidade
+          </Link>
+          <Link
+            href="/termos"
+            className="hover:text-foreground transition-colors"
+          >
+            Termos de Uso
+          </Link>
         </div>
       </div>
       <div className="border-t border-black/5 dark:border-white/10 py-5 text-center text-xs text-gray-500 dark:text-gray-500">
-        © {new Date().getFullYear()} Hervesson Porto · Trinc Technologies LTDA
+        {/* Razão social exata da Receita + CNPJ: a análise de integridade da
+            Meta cruza o que o site diz com o registro oficial. Divergência de
+            nome empresarial é causa comum de reprovação. */}
+        © {new Date().getFullYear()} Hervesson Porto · {legal.razaoSocial} · CNPJ{" "}
+        {legal.cnpj}
       </div>
     </footer>
   )

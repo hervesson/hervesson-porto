@@ -32,5 +32,21 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: "yearly" as const,
       priority: 0.6,
     })),
+    // Páginas jurídicas — precisam ser públicas e indexáveis: a análise de
+    // integridade da Meta acessa a política de privacidade pela URL.
+    // lastModified fixo na data da revisão do texto (ver lib/legal.ts), não
+    // new Date(), pra não sinalizar mudança a cada build.
+    {
+      url: `${site.url}/privacidade`,
+      lastModified: new Date("2026-08-04"),
+      changeFrequency: "yearly" as const,
+      priority: 0.3,
+    },
+    {
+      url: `${site.url}/termos`,
+      lastModified: new Date("2026-08-04"),
+      changeFrequency: "yearly" as const,
+      priority: 0.3,
+    },
   ]
 }

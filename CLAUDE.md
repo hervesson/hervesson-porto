@@ -123,8 +123,9 @@ Quando o usuário pedir skill nova:
 ## O que é esse workspace
 
 Operação da marca pessoal de Hervesson Porto (pessoa jurídica por trás:
-Trinc Technologies LTDA). Aqui eu produzo, publico, mantenho relação com
-audiência e construo autoridade em TI + IA aplicada a negócios.
+Trinc Tecnologies LTDA — razão social exata da Receita, sem "h"; usar
+"Trinc" como marca no dia a dia). Aqui eu produzo, publico, mantenho
+relação com audiência e construo autoridade em TI + IA aplicada a negócios.
 
 **Estrutura de pastas:**
 - `_memoria/` — quem eu sou, como falo, o que tá em foco
