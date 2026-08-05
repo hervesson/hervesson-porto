@@ -33,6 +33,21 @@ export function phoneVariants(phone: string): string[] {
   return [d];
 }
 
+/**
+ * Forma canônica pra SALVAR um número novo no banco: sempre com o nono
+ * dígito quando aplicável (13 dígitos: 55 + DDD + 9XXXXXXXX).
+ *
+ * Diferente de phoneVariants (que serve pra BUSCAR, e por isso devolve as
+ * duas formas), esta função decide qual delas gravar. Sem isso, um lead
+ * criado a partir de mensagem recebida da Meta nasce com o wa_id cru — sem
+ * o 9 — e todo envio de volta pra ele falha (o número que a Meta aceita
+ * mandar é o de 13 dígitos, o mesmo cadastrado como destinatário de teste).
+ */
+export function canonicalPhone(phone: string): string {
+  const variants = phoneVariants(phone);
+  return variants.find((v) => v.length === 13) ?? variants[0];
+}
+
 // Aceita entradas soltas do formulário do site ("+55 (98) 98895-8835") e normaliza.
 export function normalizePhone(input: string): string {
   const digits = input.replace(/\D/g, "");

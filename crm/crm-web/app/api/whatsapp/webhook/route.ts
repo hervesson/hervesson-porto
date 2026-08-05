@@ -4,7 +4,7 @@ import { mkdir, writeFile } from "fs/promises";
 import path from "path";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
-import { normalizeDigits, phoneVariants } from "@/lib/phone";
+import { normalizeDigits, phoneVariants, canonicalPhone } from "@/lib/phone";
 import { scheduleAgentRun } from "@/lib/ai/agent-scheduler";
 import { createLeadNotification } from "@/lib/notifications";
 import { downloadMedia, markAsRead } from "@/lib/whatsapp/cloud-api";
@@ -273,7 +273,9 @@ async function handleInbound(msg: MetaMessage, value: MetaValue, isEcho: boolean
   const lead =
     existing ??
     (await prisma.lead.create({
-      data: { phone, name: profileName, source: "whatsapp" },
+      // salva na forma canônica (com o 9), não o wa_id cru — senão o envio de
+      // volta falha, porque a Meta não aceita mandar pro número sem o 9
+      data: { phone: canonicalPhone(phone), name: profileName, source: "whatsapp" },
     }));
 
   if (!existing && !isEcho) {
