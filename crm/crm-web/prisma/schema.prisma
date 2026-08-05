@@ -79,6 +79,11 @@ model User {
   googleAccessToken  String?
   googleRefreshToken String?
   googleTokenExpiry  DateTime?
+  // Interruptor geral do pré-atendimento por IA — desliga a resposta
+  // automática em todas as conversas de uma vez, sem mexer no aiPaused de
+  // cada lead (quem já foi assumido manualmente continua assumido quando
+  // isso for religado).
+  aiGloballyEnabled Boolean @default(true)
 }
 
 model Notification {

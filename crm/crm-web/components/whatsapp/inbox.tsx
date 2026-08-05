@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import { ArrowLeft, Search } from "lucide-react";
 import LeadDetail from "@/components/lead/detail";
+import AiToggle from "@/components/whatsapp/ai-toggle";
 import { formatPhone } from "@/lib/phone";
 import { timeAgo } from "@/lib/relative-time";
 
@@ -92,16 +93,19 @@ export default function WhatsappInbox({ online }: { online: boolean }) {
             </span>
           )}
         </h1>
-        <span
-          className={`flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full border ${
-            online
-              ? "border-emerald-500/30 text-emerald-300 bg-emerald-500/10"
-              : "border-red-500/30 text-red-300 bg-red-500/10"
-          }`}
-        >
-          <span className={`w-1.5 h-1.5 rounded-full ${online ? "bg-emerald-400" : "bg-red-400"}`} />
-          {online ? "Conectado" : "Offline"}
-        </span>
+        <div className="flex items-center gap-2">
+          <AiToggle />
+          <span
+            className={`flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full border ${
+              online
+                ? "border-emerald-500/30 text-emerald-300 bg-emerald-500/10"
+                : "border-red-500/30 text-red-300 bg-red-500/10"
+            }`}
+          >
+            <span className={`w-1.5 h-1.5 rounded-full ${online ? "bg-emerald-400" : "bg-red-400"}`} />
+            {online ? "Conectado" : "Offline"}
+          </span>
+        </div>
       </div>
 
       <div className="flex-1 min-h-0 flex border border-line rounded-2xl overflow-hidden bg-surface">

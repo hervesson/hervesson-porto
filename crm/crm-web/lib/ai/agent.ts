@@ -3,6 +3,7 @@ import type { Message as DbMessage, Lead, Stage } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { sendText } from "@/lib/whatsapp/cloud-api";
 import { createAiPausedNotification } from "@/lib/notifications";
+import { isAiGloballyEnabled } from "./settings";
 import { SYSTEM_PROMPT } from "./prompt";
 
 const client = new Anthropic(); // usa ANTHROPIC_API_KEY do ambiente
@@ -85,6 +86,9 @@ function toApiMessages(history: DbMessage[]): Anthropic.MessageParam[] {
  */
 export async function runAgent(lead: Lead): Promise<void> {
   if (lead.aiPaused || !lead.phone) return;
+  // Interruptor geral (tela /whatsapp) — desliga a resposta automática em
+  // todas as conversas sem tocar no aiPaused individual de cada lead.
+  if (!(await isAiGloballyEnabled())) return;
 
   const history = await prisma.message.findMany({
     where: { leadId: lead.id },
