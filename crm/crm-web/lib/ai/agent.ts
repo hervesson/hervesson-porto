@@ -1,7 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import type { Message as DbMessage, Lead, Stage } from "@prisma/client";
 import { prisma } from "@/lib/db";
-import { sendText } from "@/lib/evolution";
+import { sendText } from "@/lib/whatsapp/cloud-api";
 import { createAiPausedNotification } from "@/lib/notifications";
 import { SYSTEM_PROMPT } from "./prompt";
 
@@ -68,8 +68,9 @@ function toApiMessages(history: DbMessage[]): Anthropic.MessageParam[] {
   const msgs: Anthropic.MessageParam[] = [];
   for (const m of history) {
     const role = m.direction === "in" ? "user" : "assistant";
-    // A API exige alternância começando por "user"; a Evolution garante que a
-    // primeira mensagem é do lead. Mensagens consecutivas do mesmo papel são ok.
+    // A API exige alternância começando por "user"; o webhook só cria lead a
+    // partir de mensagem recebida, então a primeira é sempre do lead.
+    // Mensagens consecutivas do mesmo papel são ok.
     msgs.push({ role, content: m.body });
   }
   // A conversa precisa terminar com uma mensagem do usuário para a IA responder.
@@ -79,7 +80,7 @@ function toApiMessages(history: DbMessage[]): Anthropic.MessageParam[] {
 
 /**
  * Roda o atendimento da IA para um lead: lê o histórico, chama o Claude,
- * envia a resposta pelo WhatsApp (Evolution) e atualiza o lead + grava a mensagem.
+ * envia a resposta pelo WhatsApp (Cloud API) e atualiza o lead + grava a mensagem.
  * Deve ser chamado só quando lead.aiPaused === false.
  */
 export async function runAgent(lead: Lead): Promise<void> {
@@ -134,10 +135,9 @@ export async function runAgent(lead: Lead): Promise<void> {
       direction: "out",
       author: "ia",
       body: reply,
-      // guarda o id da Evolution — o webhook usa pra reconhecer o eco dessa
-      // mensagem (fromMe) como já registrada, em vez de achar que foi o
-      // Hervesson respondendo pelo celular e pausar a IA à toa
-      waMessageId: sendResult?.key?.id ?? undefined,
+      // guarda o wamid da Meta — as confirmações de entrega chegam por ele, e
+      // o dedupe do webhook usa esse id pra não regravar a mesma mensagem
+      waMessageId: sendResult?.id || undefined,
     },
   });
 

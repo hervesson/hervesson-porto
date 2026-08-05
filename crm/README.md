@@ -1,7 +1,7 @@
 # CRM WhatsApp — Atendimento primário com IA
 
 CRM de leads com Kanban + atendimento automático no WhatsApp por IA (Claude).
-WhatsApp pela **Evolution API** (conecta por QR no número atual — modo Baileys).
+WhatsApp pela **Cloud API oficial da Meta**.
 
 - **Produção:** deploy no **Easypanel** (serviços nativos + domínio/SSL). Ver **[EASYPANEL.md](EASYPANEL.md)**.
 - **Teste local:** `docker compose up` (instruções abaixo).
@@ -9,17 +9,26 @@ WhatsApp pela **Evolution API** (conecta por QR no número atual — modo Bailey
 ## Arquitetura
 
 ```
-WhatsApp ⇄ Evolution API ─(webhook)→ crm-web (Next.js) ─(Claude API)→ resposta
-                │                         │  ↑ painel Kanban + login
-             Redis                     Postgres (bancos: evolution, crm)
-                                          │
-Site (Vercel) ─(POST /api/leads)──────────┘   Easypanel/Traefik expõe o painel (SSL)
+WhatsApp ⇄ Cloud API (Meta) ─(webhook HTTPS)→ crm-web (Next.js) ─(Claude API)→ resposta
+                                                  │  ↑ painel Kanban + login
+                                               Postgres (banco: crm)
+                                                  │
+Site (Vercel) ─(POST /api/leads)──────────────────┘   Easypanel/Traefik expõe o painel (SSL)
 ```
 
-Fluxo: lead manda mensagem → Evolution recebe → chama o webhook do `crm-web` →
-grava o lead + mensagem → se a IA não estiver pausada, o agente Claude responde
-(com o tom da marca, lendo o contexto do negócio) e envia pela REST da Evolution.
-Tudo aparece no Kanban.
+Fluxo: lead manda mensagem → a Meta chama o webhook do `crm-web` → grava o lead +
+mensagem → se a IA não estiver pausada, o agente Claude responde (com o tom da
+marca, lendo o contexto do negócio) e envia pela Graph API. Tudo aparece no Kanban.
+
+## Por que a API oficial e não a Evolution/Baileys
+
+A Evolution foi removida em 2026-08-05. Três motivos:
+
+- **Botões e listas não são mais entregues** no Baileys — a API responde 201 e a
+  mensagem nunca chega no celular do contato.
+- **Viola o Termo de Uso da Meta**, com risco de ban do número.
+- **Custo praticamente zero** na oficial pra este uso: mensagem iniciada pelo
+  contato abre uma janela de 24h em que as respostas são gratuitas.
 
 ## Teste local (docker compose)
 
@@ -31,36 +40,21 @@ cp .env.example .env         # preencher TODOS os valores
 node crm-web/scripts/hash-senha.mjs "minhaSenhaForte"   # cole em ADMIN_PASSWORD_HASH
 
 docker compose up -d --build
-docker compose logs -f evolution-api   # acompanhar
+docker compose logs -f crm-web   # acompanhar
 # painel em http://localhost:3000
 ```
 
-### Conectar o WhatsApp (QR)
+### Receber mensagens em desenvolvimento
 
-1. A Evolution sobe em `http://localhost:8080` (só na rede local da VPS).
-2. Criar a instância e pegar o QR (o `EVOLUTION_INSTANCE` do `.env`):
+A Meta só entrega webhook em **HTTPS público** — `localhost` não serve. Exponha a
+porta 3000 por um túnel HTTPS e cadastre a URL no painel do app, em
+*Configuração → Webhook*, com o mesmo `WHATSAPP_WEBHOOK_VERIFY_TOKEN` do `.env`.
 
-```bash
-# criar instância
-curl -X POST http://localhost:8080/instance/create \
-  -H "apikey: $AUTHENTICATION_API_KEY" -H "Content-Type: application/json" \
-  -d '{"instanceName":"hervesson","integration":"WHATSAPP-BAILEYS","qrcode":true}'
+⚠️ Existe **uma** URL de callback por app. Apontar pro túnel local derruba a
+produção enquanto durar o teste.
 
-# reconectar / novo QR quando precisar
-curl http://localhost:8080/instance/connect/hervesson -H "apikey: $AUTHENTICATION_API_KEY"
-```
-
-Ou abra o **Evolution Manager** em `http://localhost:8080/manager` e escaneie o QR
-com o WhatsApp do número (Aparelhos conectados → Conectar aparelho).
-
-3. Confirme o status `open`:
-
-```bash
-curl http://localhost:8080/instance/connectionState/hervesson -H "apikey: $AUTHENTICATION_API_KEY"
-```
-
-O webhook já vem configurado por env (`WEBHOOK_GLOBAL_URL` → `crm-web`), então não
-precisa configurar webhook manualmente.
+Enquanto o app estiver em modo de desenvolvimento, ele só conversa com os números
+de teste cadastrados no painel da Meta — até 5.
 
 ### Painel
 
@@ -69,17 +63,23 @@ Easypanel. Login com `ADMIN_EMAIL` e a senha.
 
 ## ⚠️ Riscos e atenções
 
-- **Ban do número:** o modo Baileys da Evolution viola os Termos da Meta. Use sem
-  disparo em massa, sem spam. Mantenha um backup do número. Se precisar de garantia,
-  a Evolution também suporta o modo **Cloud API oficial** (mesma stack, sem risco).
-- **VPS caseira:** o atendimento depende da energia e internet da casa. Se cair, para.
+- **Janela de 24 horas:** texto livre só é entregue dentro de 24h da última
+  mensagem do contato. Fora dela, só **template aprovado**. É a diferença de
+  comportamento que mais surpreende quem vem do Baileys.
+- **Nota de qualidade:** muitos bloqueios ou denúncias derrubam o número pra
+  `RED`, a Meta corta o limite de envio e depois bloqueia. A página `/whatsapp`
+  mostra o status.
+- **Token expira:** o da tela de teste dura 24h. Em produção, use token
+  permanente de Usuário do Sistema — ver seção 3 do EASYPANEL.md.
 - **LGPD:** conversas são dados pessoais. O painel é autenticado e o Postgres não é
-  exposto publicamente (só o `crm-web`, via Easypanel/Traefik). Não compartilhe segredos.
+  exposto publicamente. Ver a Política de Privacidade em `site/app/privacidade`.
 - **Custo Claude API:** cobrança por conversa. Começa no Haiku (`AI_MODEL`) e monitore.
 
 ## Estrutura
 
-- `docker-compose.yml` — os 5 serviços.
-- `postgres-init/` — cria o banco `evolution` no primeiro boot.
+- `docker-compose.yml` — Postgres + painel (2 serviços).
 - `crm-web/` — o app Next.js (painel + API + webhook + agente IA).
+- `crm-web/lib/whatsapp/cloud-api.ts` — cliente da Cloud API. **Escrito pra ser
+  portável**: não importa nada do CRM, então dá pra copiar inteiro pra outros
+  projetos (é o que vai pro sistema de pedidos do açaí).
 - `.env.example` — todas as variáveis.

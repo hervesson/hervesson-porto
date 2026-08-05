@@ -3,7 +3,7 @@ import { readFile } from "fs/promises";
 import path from "path";
 import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/session";
-import { sendMedia } from "@/lib/evolution";
+import { sendMedia } from "@/lib/whatsapp/cloud-api";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -32,19 +32,19 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
   const fileName = path.basename(proposal.pdfUrl).replace(/^\d+-/, "");
   const caption = `Proposta ${proposal.number} — ${proposal.clientName}`;
 
-  let base64: string;
+  let buffer: Buffer;
   try {
-    base64 = (await readFile(filePath)).toString("base64");
+    buffer = await readFile(filePath);
   } catch (err) {
     return NextResponse.json({ error: "arquivo do PDF não encontrado no servidor", detail: String(err) }, { status: 404 });
   }
 
   try {
     await sendMedia(proposal.lead.phone, {
-      mediatype: "document",
-      mimetype: "application/pdf",
-      media: base64,
+      kind: "document",
+      mimeType: "application/pdf",
       fileName,
+      buffer,
       caption,
     });
   } catch (err) {

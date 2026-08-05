@@ -3,21 +3,22 @@ import { mkdir, writeFile } from "fs/promises";
 import path from "path";
 import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/session";
-import { sendText, sendMedia } from "@/lib/evolution";
+import { sendText, sendMedia, type MediaKind } from "@/lib/whatsapp/cloud-api";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const MAX_BASE64_LEN = 16 * 1024 * 1024; // ~16MB de base64 (~12MB de arquivo)
 
-function mediaTypeFor(mimeType: string): string {
+function mediaTypeFor(mimeType: string): MediaKind {
   if (mimeType.startsWith("image/")) return "image";
   if (mimeType.startsWith("video/")) return "video";
   if (mimeType.startsWith("audio/")) return "audio";
   return "document";
 }
 
-// POST = resposta manual do Hervesson (texto ou arquivo), enviada pelo WhatsApp via Evolution.
+// POST = resposta manual do Hervesson (texto ou arquivo), enviada pelo WhatsApp
+// pela Cloud API oficial da Meta.
 export async function POST(req: Request) {
   const session = await requireUser();
   if (!session) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -57,9 +58,10 @@ export async function POST(req: Request) {
     const dir = path.join(process.cwd(), "public", "uploads", lead.id);
     const mediaUrl = `/uploads/${lead.id}/${fileName}`;
 
+    const buffer = Buffer.from(base64, "base64");
     try {
       await mkdir(dir, { recursive: true });
-      await writeFile(path.join(dir, fileName), Buffer.from(base64, "base64"));
+      await writeFile(path.join(dir, fileName), buffer);
     } catch (err) {
       return NextResponse.json(
         { error: "falha ao salvar o arquivo", detail: String(err) },
@@ -70,10 +72,10 @@ export async function POST(req: Request) {
     let sendResult;
     try {
       sendResult = await sendMedia(lead.phone, {
-        mediatype,
-        mimetype: mimeType,
-        media: base64,
+        kind: mediatype,
+        mimeType,
         fileName: safeName,
+        buffer,
       });
     } catch (err) {
       return NextResponse.json(
@@ -91,10 +93,8 @@ export async function POST(req: Request) {
         mediaUrl,
         mediaType: mediatype,
         fileName: safeName,
-        // guarda o id que a Evolution devolveu — o webhook usa pra saber
-        // que essa mensagem já foi registrada aqui (evita duplicar quando
-        // o eco dela chegar de volta pelo messages.upsert)
-        waMessageId: sendResult?.key?.id ?? undefined,
+        // wamid da Meta — por ele chegam as confirmações de entrega no webhook
+        waMessageId: sendResult?.id || undefined,
       },
     });
 
@@ -123,7 +123,7 @@ export async function POST(req: Request) {
       direction: "out",
       author: "hervesson",
       body: text,
-      waMessageId: sendResult?.key?.id ?? undefined,
+      waMessageId: sendResult?.id || undefined,
     },
   });
 

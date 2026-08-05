@@ -1,50 +1,142 @@
 import { NextResponse } from "next/server";
+import { createHmac, timingSafeEqual } from "crypto";
 import { mkdir, writeFile } from "fs/promises";
 import path from "path";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
-import { jidToPhone } from "@/lib/phone";
+import { normalizeDigits, phoneVariants } from "@/lib/phone";
 import { scheduleAgentRun } from "@/lib/ai/agent-scheduler";
 import { createLeadNotification } from "@/lib/notifications";
-import { fetchProfilePicture, getBase64FromMediaMessage } from "@/lib/evolution";
+import { downloadMedia, markAsRead } from "@/lib/whatsapp/cloud-api";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-// Extrai o texto de uma mensagem da Evolution (Baileys) — cobre os tipos comuns.
-function extractText(message: Record<string, unknown> | undefined): string {
-  if (!message) return "";
-  const m = message as Record<string, any>;
-  return (
-    m.conversation ??
-    m.extendedTextMessage?.text ??
-    m.imageMessage?.caption ??
-    m.videoMessage?.caption ??
-    m.buttonsResponseMessage?.selectedDisplayText ??
-    m.listResponseMessage?.title ??
-    ""
-  );
+const VERIFY_TOKEN = process.env.WHATSAPP_WEBHOOK_VERIFY_TOKEN ?? "";
+const APP_SECRET = process.env.WHATSAPP_APP_SECRET ?? "";
+
+// ---------------------------------------------------------------------------
+// GET — verificação do endpoint. A Meta chama uma vez, na hora que você cadastra
+// a URL no painel, e espera o hub.challenge de volta em texto puro.
+// ---------------------------------------------------------------------------
+export async function GET(req: Request) {
+  const url = new URL(req.url);
+  const mode = url.searchParams.get("hub.mode");
+  const token = url.searchParams.get("hub.verify_token");
+  const challenge = url.searchParams.get("hub.challenge");
+
+  if (mode === "subscribe" && token && token === VERIFY_TOKEN) {
+    return new Response(challenge ?? "", {
+      status: 200,
+      headers: { "Content-Type": "text/plain" },
+    });
+  }
+  return new Response("forbidden", { status: 403 });
 }
 
+// ---------------------------------------------------------------------------
+// Assinatura: a Meta assina o corpo cru com o App Secret. Sem essa checagem,
+// qualquer um que descubra a URL injeta mensagem no CRM.
+// ---------------------------------------------------------------------------
+function signatureValid(raw: string, header: string | null): boolean {
+  if (!APP_SECRET) {
+    // Sem segredo configurado não dá pra validar. Recusa em produção em vez de
+    // aceitar às cegas; em dev, deixa passar pra facilitar o túnel local.
+    if (process.env.NODE_ENV === "production") return false;
+    console.warn("[webhook] WHATSAPP_APP_SECRET não configurado — pulando validação");
+    return true;
+  }
+  if (!header?.startsWith("sha256=")) return false;
+
+  const expected = createHmac("sha256", APP_SECRET).update(raw, "utf8").digest();
+  const received = Buffer.from(header.slice("sha256=".length), "hex");
+  if (received.length !== expected.length) return false;
+  return timingSafeEqual(expected, received);
+}
+
+// ---------------------------------------------------------------------------
+// Formato dos eventos da Cloud API. Só os campos que usamos — a Meta manda
+// bem mais (sha256, timestamps, contexto de resposta) e nada disso importa aqui.
+// ---------------------------------------------------------------------------
 type MediaKind = "audio" | "image" | "video" | "document";
 
-// Detecta se a mensagem tem mídia anexada (a Evolution manda só metadados no
-// payload — o conteúdo real vem de getBase64FromMediaMessage).
-function detectMediaKind(message: Record<string, unknown> | undefined): MediaKind | null {
-  if (!message) return null;
-  const m = message as Record<string, any>;
-  if (m.audioMessage) return "audio";
-  if (m.imageMessage) return "image";
-  if (m.videoMessage) return "video";
-  if (m.documentMessage) return "document";
-  return null;
-}
+type MediaNode = { id?: string; caption?: string };
 
-const PLACEHOLDER_BODY: Record<MediaKind, string> = {
+type MetaMessage = {
+  id?: string;
+  /** quem enviou (mensagem recebida) */
+  from?: string;
+  /** para quem foi (eco de mensagem enviada do celular) */
+  to?: string;
+  recipient_id?: string;
+  type?: string;
+  text?: { body?: string };
+  image?: MediaNode;
+  video?: MediaNode;
+  audio?: MediaNode;
+  document?: MediaNode;
+  button?: { text?: string };
+  interactive?: {
+    button_reply?: { title?: string };
+    list_reply?: { title?: string };
+  };
+  location?: { name?: string };
+  reaction?: { emoji?: string };
+};
+
+type MetaValue = {
+  contacts?: Array<{ profile?: { name?: string }; wa_id?: string }>;
+  messages?: MetaMessage[];
+  /** ecos: só chegam com Coexistence + campo "message_echoes" assinado */
+  message_echoes?: MetaMessage[];
+  statuses?: Array<{ id?: string; status?: string }>;
+};
+
+type MetaPayload = {
+  entry?: Array<{ changes?: Array<{ value?: MetaValue }> }>;
+};
+
+const PLACEHOLDER: Record<MediaKind, string> = {
   audio: "[áudio]",
   image: "[imagem]",
   video: "[vídeo]",
   document: "[documento]",
 };
+
+function extractText(msg: MetaMessage): string {
+  switch (msg.type) {
+    case "text":
+      return msg.text?.body ?? "";
+    case "image":
+      return msg.image?.caption ?? "";
+    case "video":
+      return msg.video?.caption ?? "";
+    case "document":
+      return msg.document?.caption ?? "";
+    case "button":
+      // resposta de botão de template
+      return msg.button?.text ?? "";
+    case "interactive":
+      // resposta de botão ou de lista interativa
+      return (
+        msg.interactive?.button_reply?.title ??
+        msg.interactive?.list_reply?.title ??
+        ""
+      );
+    case "location":
+      return msg.location?.name ?? "[localização]";
+    case "reaction":
+      return msg.reaction?.emoji ? `[reagiu ${msg.reaction.emoji}]` : "";
+    default:
+      return "";
+  }
+}
+
+function mediaKindOf(msg: MetaMessage): MediaKind | null {
+  const t = msg.type;
+  if (t === "audio" || t === "image" || t === "video" || t === "document") return t;
+  return null;
+}
 
 const EXT_BY_MIME: Record<string, string> = {
   "audio/ogg": "ogg",
@@ -57,168 +149,170 @@ const EXT_BY_MIME: Record<string, string> = {
   "application/pdf": "pdf",
 };
 
-function extFromMime(mime: string | undefined): string {
+function extFromMime(mime?: string): string {
   if (!mime) return "bin";
   const clean = mime.split(";")[0]?.trim() ?? mime;
   return EXT_BY_MIME[clean] ?? clean.split("/")[1] ?? "bin";
 }
 
-// Mapeia o status de entrega da Evolution/Baileys pro nosso enum simples.
-// Best-effort: a Evolution manda ora string (ex. "DELIVERY_ACK"), ora o
-// código numérico do Baileys (WAMessageStatus). Cobre os dois formatos —
-// ajustar aqui se o payload real vier diferente (não verificado em produção
-// ainda, precisa do evento MESSAGES_UPDATE habilitado na Evolution).
-function mapDeliveryStatus(raw: unknown): string | null {
-  const s = String(raw ?? "").toUpperCase();
-  if (s === "0" || s === "ERROR") return "failed";
-  if (s === "1" || s === "2" || s === "PENDING" || s === "SERVER_ACK") return "sent";
-  if (s === "3" || s === "DELIVERY_ACK") return "delivered";
-  if (s === "4" || s === "5" || s === "READ" || s === "PLAYED") return "read";
-  return null;
+// Status de entrega da Meta -> nosso enum simples.
+function mapStatus(raw: unknown): string | null {
+  switch (String(raw ?? "").toLowerCase()) {
+    case "sent":
+      return "sent";
+    case "delivered":
+      return "delivered";
+    case "read":
+      return "read";
+    case "failed":
+      return "failed";
+    default:
+      return null;
+  }
 }
 
+// Baixa a mídia e salva em public/uploads/<leadId>/. Best-effort: se falhar, a
+// mensagem ainda é gravada com o placeholder de texto.
+async function saveIncomingMedia(leadId: string, mediaId: string, kind: MediaKind) {
+  const media = await downloadMedia(mediaId);
+  const safeName =
+    media.fileName?.replace(/[^\w.\-]/g, "_") || `${kind}.${extFromMime(media.mimeType)}`;
+  const savedName = `${Date.now()}-${safeName}`;
+  const dir = path.join(process.cwd(), "public", "uploads", leadId);
+  await mkdir(dir, { recursive: true });
+  await writeFile(path.join(dir, savedName), media.buffer);
+  return {
+    mediaUrl: `/uploads/${leadId}/${savedName}`,
+    mediaType: kind,
+    fileName: safeName,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// POST — eventos.
+// ---------------------------------------------------------------------------
 export async function POST(req: Request) {
-  const payload = await req.json().catch(() => null);
-  if (!payload) return NextResponse.json({ ok: true });
+  const raw = await req.text();
+  if (!signatureValid(raw, req.headers.get("x-hub-signature-256"))) {
+    return new Response("invalid signature", { status: 401 });
+  }
 
-  const event: string = payload.event ?? payload.type ?? "";
-  const items = Array.isArray(payload.data) ? payload.data : [payload.data];
+  let payload: MetaPayload;
+  try {
+    payload = JSON.parse(raw) as MetaPayload;
+  } catch {
+    return NextResponse.json({ ok: true });
+  }
 
-  if (event === "messages.update") {
-    for (const data of items) {
+  for (const entry of payload?.entry ?? []) {
+    for (const change of entry?.changes ?? []) {
+      const value = change?.value ?? {};
+
       try {
-        const waMessageId: string | undefined = data?.keyId ?? data?.key?.id;
-        const status = mapDeliveryStatus(data?.status ?? data?.update?.status);
-        if (!waMessageId || !status) continue;
-        await prisma.message.updateMany({ where: { waMessageId }, data: { status } });
+        // --- confirmações de entrega das mensagens que nós enviamos ---
+        for (const st of value.statuses ?? []) {
+          const status = mapStatus(st?.status);
+          if (!st?.id || !status) continue;
+          await prisma.message.updateMany({
+            where: { waMessageId: st.id },
+            data: { status },
+          });
+        }
+
+        // --- mensagens recebidas ---
+        for (const msg of value.messages ?? []) {
+          await handleInbound(msg, value, false);
+        }
+
+        // --- ecos: mensagens que o Hervesson mandou pelo celular ---
+        // Só chegam quando a Coexistence estiver ativa e o campo
+        // "message_echoes" assinado no app. Sem isso, o array não vem.
+        for (const msg of value.message_echoes ?? []) {
+          await handleInbound(msg, value, true);
+        }
       } catch (err) {
-        console.error("[webhook] erro atualizando status de entrega:", err);
+        console.error("[webhook] erro processando change:", err);
+        // não falha o webhook inteiro — a Meta reentrega tudo e duplicaria
       }
-    }
-    return NextResponse.json({ ok: true });
-  }
-
-  if (event !== "messages.upsert") {
-    // outros eventos (connection.update etc.) — só confirma
-    return NextResponse.json({ ok: true });
-  }
-
-  for (const data of items) {
-    try {
-      const key = data?.key ?? {};
-      const remoteJid: string = key.remoteJid ?? "";
-      // fromMe = mensagem enviada da nossa própria conta (painel, IA, ou
-      // direto do celular do Hervesson) — não dá pra distinguir a origem só
-      // pelo payload, então usa o dedupe por waMessageId abaixo: painel e IA
-      // já gravam a mensagem (com o id da Evolution) na hora de enviar, daí
-      // o eco que chega aqui é reconhecido e ignorado; o que sobrar é
-      // mensagem mandada direto do celular, fora do painel.
-      const fromMe: boolean = Boolean(key.fromMe);
-      if (!remoteJid || remoteJid.endsWith("@g.us")) continue;
-
-      const mediaKind = detectMediaKind(data?.message);
-      let body = extractText(data?.message).trim();
-      if (!body && mediaKind) body = PLACEHOLDER_BODY[mediaKind];
-      if (!body) continue; // nem texto reconhecido, nem mídia — ignora
-
-      const phone = jidToPhone(remoteJid);
-      const waMessageId: string | undefined = key.id ?? undefined;
-      const pushName: string | null = data?.pushName ?? null;
-
-      // dedupe: se já registramos essa mensagem (nós mesmos enviamos, ou já
-      // processamos esse evento antes), pula
-      if (waMessageId) {
-        const dup = await prisma.message.findUnique({ where: { waMessageId } });
-        if (dup) continue;
-      }
-
-      // acha ou cria o lead pelo telefone — pushName só é confiável quando
-      // não é fromMe (numa mensagem nossa, pushName é o nome do Hervesson,
-      // não do contato)
-      const existingLead = await prisma.lead.findUnique({ where: { phone } });
-      const lead =
-        existingLead ??
-        (await prisma.lead.create({
-          data: { phone, name: fromMe ? null : pushName, source: "whatsapp" },
-        }));
-
-      if (!existingLead && !fromMe) {
-        await createLeadNotification(lead);
-      }
-
-      // busca a foto de perfil best-effort — só tenta enquanto o lead não
-      // tiver uma (evita bater na Evolution toda mensagem à toa)
-      if (!lead.avatarUrl) {
-        try {
-          const avatarUrl = await fetchProfilePicture(phone);
-          if (avatarUrl) {
-            await prisma.lead.update({ where: { id: lead.id }, data: { avatarUrl } });
-          }
-        } catch (err) {
-          console.error("[webhook] erro buscando avatar:", err);
-        }
-      }
-
-      // baixa a mídia recebida (áudio, imagem, vídeo, documento) — best-effort,
-      // se falhar a mensagem ainda é salva com o texto/placeholder
-      let mediaUrl: string | undefined;
-      let mediaType: string | undefined;
-      let fileName: string | undefined;
-      if (mediaKind && waMessageId) {
-        try {
-          const media = await getBase64FromMediaMessage(waMessageId);
-          if (media?.base64) {
-            const safeName =
-              typeof media.fileName === "string" && media.fileName
-                ? media.fileName.replace(/[^\w.\-]/g, "_")
-                : `${mediaKind}.${extFromMime(media.mimetype)}`;
-            const dir = path.join(process.cwd(), "public", "uploads", lead.id);
-            const savedName = `${Date.now()}-${safeName}`;
-            await mkdir(dir, { recursive: true });
-            await writeFile(path.join(dir, savedName), Buffer.from(media.base64, "base64"));
-            mediaUrl = `/uploads/${lead.id}/${savedName}`;
-            mediaType = mediaKind;
-            fileName = safeName;
-          }
-        } catch (err) {
-          console.error("[webhook] erro baixando mídia recebida:", err);
-        }
-      }
-
-      await prisma.message.create({
-        data: {
-          leadId: lead.id,
-          direction: fromMe ? "out" : "in",
-          author: fromMe ? "hervesson" : "lead",
-          body,
-          mediaUrl,
-          mediaType,
-          fileName,
-          waMessageId,
-          raw: data ?? undefined,
-        },
-      });
-
-      if (fromMe) {
-        // chegou até aqui sem ser deduplicada, então foi mandada direto do
-        // celular (painel e IA já tinham gravado a própria mensagem antes) —
-        // Hervesson assumiu a conversa por fora do CRM, pausa a IA pra ela
-        // não responder por cima dele.
-        if (!lead.aiPaused) {
-          await prisma.lead.update({ where: { id: lead.id }, data: { aiPaused: true } });
-        }
-        continue;
-      }
-
-      // agenda a IA com debounce — se chegar outra mensagem desse lead nos
-      // próximos segundos, agrupa num único turno em vez de responder cada
-      // mensagem separadamente (aiPaused é checado de novo lá dentro)
-      scheduleAgentRun(lead.id);
-    } catch (err) {
-      console.error("[webhook] erro processando mensagem:", err);
-      // não falha o webhook inteiro por causa de uma mensagem
     }
   }
 
   return NextResponse.json({ ok: true });
+}
+
+async function handleInbound(msg: MetaMessage, value: MetaValue, isEcho: boolean) {
+  const waMessageId = msg.id;
+  // Em eco, "to" é o contato; em mensagem recebida, é "from".
+  const rawPhone = isEcho ? (msg.to ?? msg.recipient_id) : msg.from;
+  if (!rawPhone) return;
+
+  const phone = normalizeDigits(String(rawPhone));
+
+  // dedupe — a Meta reentrega o mesmo evento quando não recebe 200 a tempo
+  if (waMessageId) {
+    const dup = await prisma.message.findUnique({ where: { waMessageId } });
+    if (dup) return;
+  }
+
+  const kind = mediaKindOf(msg);
+  let body = extractText(msg).trim();
+  if (!body && kind) body = PLACEHOLDER[kind];
+  if (!body) return; // tipo não suportado (contacts, system, order...)
+
+  // nome do perfil vem em contacts[], e só é confiável em mensagem recebida
+  const profileName: string | null = isEcho
+    ? null
+    : (value.contacts?.[0]?.profile?.name ?? null);
+
+  // Busca tolerante ao nono dígito: a Meta manda o wa_id de celular brasileiro
+  // muitas vezes sem o 9, e o banco tem com. Sem isso, vira lead duplicado.
+  const existing = await prisma.lead.findFirst({
+    where: { phone: { in: phoneVariants(phone) } },
+  });
+
+  const lead =
+    existing ??
+    (await prisma.lead.create({
+      data: { phone, name: profileName, source: "whatsapp" },
+    }));
+
+  if (!existing && !isEcho) {
+    await createLeadNotification(lead);
+  }
+
+  // mídia recebida
+  let media: { mediaUrl: string; mediaType: string; fileName: string } | undefined;
+  const mediaId = kind ? msg[kind]?.id : undefined;
+  if (kind && mediaId) {
+    try {
+      media = await saveIncomingMedia(lead.id, mediaId, kind);
+    } catch (err) {
+      console.error("[webhook] erro baixando mídia:", err);
+    }
+  }
+
+  await prisma.message.create({
+    data: {
+      leadId: lead.id,
+      direction: isEcho ? "out" : "in",
+      author: isEcho ? "hervesson" : "lead",
+      body,
+      ...(media ?? {}),
+      waMessageId,
+      raw: msg as Prisma.InputJsonValue,
+    },
+  });
+
+  if (isEcho) {
+    // Hervesson respondeu pelo celular — assume a conversa e cala a IA.
+    if (!lead.aiPaused) {
+      await prisma.lead.update({ where: { id: lead.id }, data: { aiPaused: true } });
+    }
+    return;
+  }
+
+  if (waMessageId) await markAsRead(waMessageId);
+
+  // debounce: agrupa rajada de mensagens num único turno da IA
+  scheduleAgentRun(lead.id);
 }

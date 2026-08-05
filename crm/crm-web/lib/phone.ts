@@ -1,7 +1,36 @@
 // Normaliza número de telefone para só dígitos com DDI.
-// A Evolution manda o "remoteJid" no formato "5598988958835@s.whatsapp.net".
-export function jidToPhone(jid: string): string {
-  return jid.split("@")[0].split(":")[0].replace(/\D/g, "");
+export function normalizeDigits(input: string): string {
+  return String(input).split("@")[0].split(":")[0].replace(/\D/g, "");
+}
+
+/**
+ * Variações do mesmo número brasileiro, com e sem o nono dígito.
+ *
+ * A Meta devolve o `wa_id` de celulares brasileiros frequentemente SEM o nono
+ * dígito ("559888958835"), enquanto o número que o lead informa no site e o que
+ * está salvo no banco costuma ter ("5598988958835"). Sem tratar isso, o mesmo
+ * contato vira dois leads e a conversa se parte em duas.
+ *
+ * Devolve sempre as duas formas (a original primeiro), pra usar em
+ * `where: { phone: { in: phoneVariants(x) } }`.
+ */
+export function phoneVariants(phone: string): string[] {
+  const d = normalizeDigits(phone);
+  if (!d.startsWith("55")) return [d];
+
+  const ddd = d.slice(2, 4);
+  const rest = d.slice(4);
+
+  // 9 dígitos começando com 9 -> celular no formato novo: gera o antigo
+  if (rest.length === 9 && rest.startsWith("9")) {
+    return [d, `55${ddd}${rest.slice(1)}`];
+  }
+  // 8 dígitos começando com 6-9 -> celular no formato antigo: gera o novo.
+  // (fixo começa com 2-5, e aí não existe variação a fazer)
+  if (rest.length === 8 && /^[6-9]/.test(rest)) {
+    return [d, `55${ddd}9${rest}`];
+  }
+  return [d];
 }
 
 // Aceita entradas soltas do formulário do site ("+55 (98) 98895-8835") e normaliza.
